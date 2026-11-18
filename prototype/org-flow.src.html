@@ -1,0 +1,957 @@
+<title>Org Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: Paperclip app shell (icon rail) hosting a plugin "page" slot.
+   Parent-task strip on top, live org chart left, detail + activity panel right,
+   dashboard-widget preview at the bottom. Neutral greys like Paperclip; colour
+   comes from the agents' characters and from parent tasks (one hue per parent). */
+:root{
+  --bg:#ffffff;
+  --surface:oklch(98.5% 0 0);
+  --sunken:oklch(96.6% 0 0);
+  --fg:oklch(14.5% 0 0);
+  --muted:oklch(52% 0 0);
+  --border:oklch(91.5% 0 0);
+  --edge:oklch(82% 0 0);
+  --accent:oklch(48.8% .243 264.376);
+  --accent-soft:oklch(48.8% .243 264.376 / .12);
+  --st-todo:oklch(58% .14 250);
+  --st-progress:oklch(64% .16 70);
+  --st-review:oklch(55% .2 300);
+  --st-blocked:oklch(57% .22 25);
+  --st-done:oklch(56% .15 150);
+  --warn:oklch(64% .16 70);
+  --crit:oklch(57% .22 25);
+  --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:oklch(20.5% 0 0); --surface:oklch(22.5% 0 0); --sunken:oklch(25.5% 0 0);
+    --fg:oklch(98.5% 0 0); --muted:oklch(70.8% 0 0); --border:oklch(100% 0 0 / .1); --edge:oklch(100% 0 0 / .22);
+    --accent:oklch(70% .16 264); --accent-soft:oklch(70% .16 264 / .16);
+    --st-todo:oklch(72% .12 250); --st-progress:oklch(80% .15 75); --st-review:oklch(74% .15 300);
+    --st-blocked:oklch(70% .18 25); --st-done:oklch(76% .15 150); --warn:oklch(80% .15 75); --crit:oklch(70% .18 25);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:oklch(20.5% 0 0); --surface:oklch(22.5% 0 0); --sunken:oklch(25.5% 0 0);
+  --fg:oklch(98.5% 0 0); --muted:oklch(70.8% 0 0); --border:oklch(100% 0 0 / .1); --edge:oklch(100% 0 0 / .22);
+  --accent:oklch(70% .16 264); --accent-soft:oklch(70% .16 264 / .16);
+  --st-todo:oklch(72% .12 250); --st-progress:oklch(80% .15 75); --st-review:oklch(74% .15 300);
+  --st-blocked:oklch(70% .18 25); --st-done:oklch(76% .15 150); --warn:oklch(80% .15 75); --crit:oklch(70% .18 25);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.45}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.shell{display:flex;min-height:100vh}
+.rail{width:60px;flex:none;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:14px;position:sticky;top:0;height:100vh}
+.rail .co{width:34px;height:34px;border-radius:9px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-weight:700;margin-bottom:10px}
+.rail a{width:38px;height:38px;border-radius:8px;display:grid;place-items:center;color:var(--muted)}
+.rail a.on{background:var(--sunken);color:var(--fg)}
+.rail svg{width:18px;height:18px}
+.page{flex:1;min-width:0;padding-block:18px 40px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px;max-width:1440px}
+@media (min-width:720px){.page{padding-left:max(28px, env(safe-area-inset-left, 0px));padding-right:max(28px, env(safe-area-inset-right, 0px))}}
+@media (max-width:719px){.rail{display:none}}
+
+.region{position:relative}
+.crumbs{font-size:12.5px;color:var(--muted)}
+.crumbs b{color:var(--fg);font-weight:500}
+.crumbs span{margin:0 6px;opacity:.6}
+.titlerow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-top:6px}
+h1{font-size:22px;font-weight:650;letter-spacing:-.01em;margin:0}
+h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0}
+.tag{font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:999px;border:1px dashed var(--edge);color:var(--muted)}
+.live{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--st-done)}
+.live i{width:8px;height:8px;border-radius:50%;background:currentColor;animation:blink 1.4s infinite}
+.live.off{color:var(--muted)}
+.live.off i{animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.clock{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sub{margin:6px 0 0;color:var(--muted);max-width:72ch}
+.controls{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 11px;cursor:pointer;font-size:13px}
+.btn:hover{border-color:var(--edge)}
+.btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.btn svg{width:12px;height:12px;fill:currentColor}
+.sel-in{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 8px;font-size:13px}
+
+/* Parent tasks strip */
+.parents{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.pcard{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:10px 12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:7px;min-width:0;transition:opacity .3s,border-color .2s}
+.pcard:hover{border-color:var(--edge)}
+.pcard[aria-pressed="true"]{border-color:var(--gc);box-shadow:inset 0 0 0 1px var(--gc)}
+.pcard.dim{opacity:.45}
+.pcard.done{border-color:var(--st-done)}
+.ptop{display:flex;align-items:center;gap:8px;min-width:0}
+.sw{width:10px;height:10px;border-radius:3px;flex:none;background:var(--gc)}
+.ptitle{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbar{height:6px;border-radius:3px;background:var(--sunken);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--gc);border-radius:3px;transition:width .8s ease}
+.pmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.pmeta b{color:var(--fg);font-variant-numeric:tabular-nums}
+.heads{display:flex}
+.heads img,.heads span{width:20px;height:20px;margin-left:-5px;border-radius:50%;background:var(--surface)}
+.heads :first-child{margin-left:0}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--border);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.kpi{padding:9px 14px;border:0;border-right:1px solid var(--border);background:transparent;text-align:left;display:flex;align-items:center;gap:10px}
+.kpi:last-child{border-right:0}
+.kpi img{width:34px;height:34px;flex:none}
+.kpi .v{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.click{cursor:pointer}
+.kpi.click:hover{background:var(--sunken)}
+.kpi.warn .v{color:var(--warn)}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:nth-child(2){border-right:0}.kpi:nth-child(-n+2){border-bottom:1px solid var(--border)}}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:14px;align-items:start}
+@media (max-width:1000px){.main{grid-template-columns:minmax(0,1fr)}}
+.stage{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);min-width:0}
+.canvas-scroll{overflow-x:auto}
+#org{display:block;width:100%;min-width:800px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);align-items:center}
+.legend svg{width:12px;height:12px;vertical-align:-2px;margin-right:5px}
+
+/* SVG: org */
+.edge{fill:none;stroke:var(--edge);stroke-width:1.3}
+.edge.assign{stroke-dasharray:4 4}
+.nm{fill:var(--fg);font-size:12.5px;font-weight:600;font-family:var(--font)}
+.stl{font-size:10.5px;font-family:var(--font);fill:var(--muted)}
+.node{cursor:pointer}
+.node .hit{fill:transparent}
+.halo{fill:none;stroke:transparent;stroke-width:3}
+.node.sel .halo{stroke:var(--accent)}
+.node.touched .halo{stroke:var(--tc)}
+.node.dimmed{opacity:.35;transition:opacity .3s}
+.node[data-state="working"] .stl{fill:var(--st-progress);font-weight:600}
+.node[data-state="thinking"] .stl{fill:var(--st-review);font-weight:600}
+.node[data-state="listening"] .stl{fill:var(--accent);font-weight:600}
+.node[data-state="success"] .stl{fill:var(--st-done);font-weight:600}
+.node[data-state="confused"] .stl{fill:var(--crit);font-weight:600}
+.node[data-state="waiting"] .stl{fill:var(--warn);font-weight:600}
+.node[data-state="sleepy"] .stl{font-style:italic}
+.bob{transform-box:fill-box;transform-origin:50% 92%}
+.node[data-state="idle"] .bob{animation:breathe 3.2s ease-in-out infinite}
+.node[data-state="working"] .bob{animation:bob .5s ease-in-out infinite alternate}
+.node[data-state="thinking"] .bob{animation:sway 2.6s ease-in-out infinite}
+.node[data-state="sleepy"] .bob{animation:breathe 4.8s ease-in-out infinite;opacity:.82}
+.node[data-state="listening"] .bob{animation:hop .45s ease-out 2}
+.node[data-state="success"] .bob{animation:jump .7s ease-out 3}
+.node[data-state="confused"] .bob{animation:wobble .45s ease-in-out 4}
+.node[data-state="waiting"] .bob{animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.035,.965)}}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-3px)}}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-9px)}}
+@keyframes jump{0%,100%{transform:translateY(0) scale(1)}30%{transform:translateY(-13px) scale(1.04)}60%{transform:translateY(0) scale(1.07,.93)}}
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+.fx>g{display:none}
+.node[data-state="sleepy"] .zzz,
+.node[data-state="working"] .typing,
+.node[data-state="thinking"] .thought,
+.node[data-state="listening"] .bang,
+.node[data-state="success"] .spark,
+.node[data-state="waiting"] .bang{display:block}
+.zzz text{fill:var(--muted);font-weight:700;font-family:var(--font);opacity:0;animation:zfloat 3s linear infinite}
+.zzz text:nth-child(2){animation-delay:1s}
+.zzz text:nth-child(3){animation-delay:2s}
+@keyframes zfloat{0%{transform:translate(0,0);opacity:0}15%{opacity:.9}100%{transform:translate(12px,-24px);opacity:0}}
+.typing rect{fill:var(--bg);stroke:var(--border)}
+.typing circle{fill:var(--st-progress);animation:dot 1s infinite}
+.typing circle:nth-of-type(2){animation-delay:.15s}
+.typing circle:nth-of-type(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.25}50%{opacity:1}}
+.thought ellipse,.thought circle.b{fill:var(--bg);stroke:var(--border)}
+.thought circle.d{fill:var(--st-review);animation:dot 1.2s infinite}
+.thought circle.d:nth-of-type(2){animation-delay:.2s}
+.thought circle.d:nth-of-type(3){animation-delay:.4s}
+.bang circle{fill:var(--accent)}
+.node[data-state="waiting"] .bang circle{fill:var(--warn)}
+.bang text{fill:#fff;font-weight:800;font-size:12px;font-family:var(--font)}
+.bang{transform-box:fill-box;transform-origin:center;animation:popin .4s ease-out}
+.spark path{fill:var(--st-done);transform-box:fill-box;transform-origin:center;animation:spark 1s ease-out infinite}
+.spark path:nth-child(2n){fill:var(--warn);animation-delay:.2s}
+@keyframes spark{0%{transform:scale(.2);opacity:0}30%{opacity:1}100%{transform:scale(1.2) translate(0,-4px);opacity:0}}
+@keyframes popin{0%{transform:scale(.3)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+.board-av{fill:var(--sunken);stroke:var(--edge);stroke-dasharray:3 3}
+.board-ic{fill:var(--muted)}
+.badge circle{fill:var(--fg)}
+.badge text{fill:var(--bg);font-size:10px;font-weight:700;font-family:var(--font)}
+/* chips */
+.chip{cursor:pointer}
+.chip .in{transform-box:fill-box;transform-origin:center;animation:popin .35s ease-out}
+.chip .cbg{stroke-width:1}
+.cfill{transform-box:fill-box;transform-origin:0 50%;transition:transform .8s ease}
+.chip text{fill:var(--fg);font-size:8.7px;font-family:var(--mono)}
+.chip text.pc{font-weight:700}
+.glyph{fill:none;stroke:var(--fg);stroke-width:1.2}
+.glyph .f{fill:var(--fg);stroke:none}
+.chip.sel .cbg{stroke-width:2.2}
+.chip.dim{opacity:.18}
+.more{fill:var(--muted);font-size:10px;font-family:var(--font)}
+.fly .cbg{stroke-width:1.4}
+.fly text{fill:var(--fg);font-size:9.2px;font-family:var(--mono);font-weight:700}
+.trail circle{transition:opacity .3s}
+
+/* panel */
+.panel{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);display:flex;flex-direction:column;min-width:0;max-height:900px}
+.panel>header{padding:12px 14px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#sel:empty{display:none}
+.card{margin:12px 12px 4px;border:1px solid var(--border);border-radius:9px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:10px}
+.card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.card h3{margin:0;font-size:15px;font-weight:600;line-height:1.3;text-wrap:balance}
+.x{border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;border-radius:6px}
+.x:hover{background:var(--sunken)}
+.meta{font-size:12.5px;color:var(--muted)}
+.idm{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap;flex:none}
+.pills{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;padding:1px 8px;border-radius:999px;border:1px solid var(--border);white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%}
+.gline{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);min-width:0}
+.gline span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bigbar{display:flex;align-items:center;gap:10px}
+.bigbar .pbar{flex:1;height:8px}
+.bigbar b{font-variant-numeric:tabular-nums;min-width:4ch;text-align:right}
+.path{list-style:none;margin:0;padding:0}
+.path li{display:grid;grid-template-columns:18px 22px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--border);font-size:12.5px}
+.path li:first-child{border-top:0}
+.path .n{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.path .d{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.path li.cur{font-weight:600}
+.mav{width:22px;height:22px;flex:none;display:inline-block;vertical-align:middle}
+span.mav{border-radius:50%;background:var(--sunken);border:1px dashed var(--edge);font-size:9px;font-weight:700;color:var(--muted);display:inline-grid;place-items:center}
+.who{display:flex;align-items:center;gap:12px}
+.who img{width:72px;height:72px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stats div{background:var(--sunken);border-radius:7px;padding:7px 9px}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:11.5px;color:var(--muted)}
+.tasklist{display:flex;flex-direction:column;gap:6px}
+.trow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:7px;padding:6px 8px;cursor:pointer;font-size:12.5px;width:100%}
+.trow:hover{border-color:var(--edge)}
+.trow .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .p{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.primary{border:1px solid var(--fg);background:var(--fg);color:var(--bg);border-radius:7px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+.ghost{border:1px solid var(--border);background:var(--surface);border-radius:7px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+.ghost:hover{border-color:var(--edge)}
+.ask{border:1px solid var(--warn);border-radius:8px;padding:9px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:8px}
+details{font-size:12px}
+summary{cursor:pointer;color:var(--muted)}
+pre{margin:8px 0 0;padding:10px;background:var(--sunken);border-radius:7px;overflow-x:auto;font-family:var(--mono);font-size:11px;line-height:1.5}
+#feed{list-style:none;margin:0;padding:0 6px 8px;overflow-y:auto;min-height:0;flex:1}
+#feed li button{width:100%;display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;text-align:left;border:0;background:transparent;padding:8px;border-radius:7px;cursor:pointer}
+#feed li button:hover{background:var(--sunken)}
+#feed li.on button{background:var(--accent-soft)}
+#feed li.new button{animation:newrow 1.8s ease}
+@keyframes newrow{from{background:var(--accent-soft)}to{background:transparent}}
+.ft{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding-top:3px;font-variant-numeric:tabular-nums}
+.fl1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px}
+.fl1 .mav{width:20px;height:20px}
+.fl1 .arrow{color:var(--muted)}
+.fl1 em{font-style:normal;color:var(--muted)}
+.fl2{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:2px;min-width:0}
+.fl2 .sw{width:8px;height:8px}
+.fl2 span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* widget preview */
+.wp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px;align-items:start}
+@media (max-width:860px){.wp{grid-template-columns:minmax(0,1fr)}}
+.wp-copy p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.widget{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:10px}
+.wtop{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.wrow{display:grid;grid-template-columns:minmax(0,1fr) 110px 38px;gap:10px;align-items:center;font-size:12.5px}
+.wrow .t{display:flex;gap:7px;align-items:center;min-width:0}
+.wrow .t span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wrow b{font-variant-numeric:tabular-nums;text-align:right}
+.wfoot{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;padding-top:8px;border-top:1px solid var(--border)}
+.wfoot .w{color:var(--warn);font-weight:600}
+.foot{font-size:12px;color:var(--muted);max-width:90ch}
+
+/* anatomy overlay */
+.anat{display:none}
+body.anat-on .region{outline:1.5px dashed var(--accent);outline-offset:3px}
+body.anat-on .anat{display:block;position:absolute;z-index:5;max-width:min(430px, 92%);background:var(--fg);color:var(--bg);font-size:11.5px;line-height:1.45;padding:7px 9px;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+body.anat-on .anat code{font-family:var(--mono);font-size:11px}
+body.anat-on .anat b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
+.anat.tr{top:-10px;right:8px}
+.anat.tl{top:8px;left:8px}
+.anat.bl{bottom:48px;left:8px}
+.anat.br{bottom:8px;right:8px}
+@media (prefers-reduced-motion: reduce){
+  .bob,.zzz text,.typing circle,.thought circle.d,.spark path,.bang,.chip .in,.live i{animation:none!important}
+  .zzz text{opacity:.8}
+  #feed li.new button{animation:none}
+}
+</style>
+
+<div class="shell">
+  <nav class="rail" aria-label="Navigazione di Paperclip (finta)">
+    <div class="co" aria-hidden="true">F</div>
+    <a href="#" title="Dashboard" aria-label="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></a>
+    <a href="#" title="Task" aria-label="Task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></a>
+    <a href="#" title="Agenti" aria-label="Agenti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg></a>
+    <a href="#" title="Organigramma" aria-label="Organigramma"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></svg></a>
+    <a href="#" class="on" title="Org Flow (plugin)" aria-label="Org Flow (plugin)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="19" r="2.5"/><path d="M7.5 6h9M6.5 8.2l4.2 8.6M17.5 8.2l-4.2 8.6"/></svg></a>
+  </nav>
+
+  <main class="page">
+    <header class="region" id="r-header">
+      <div class="crumbs">franciuto.com<span>/</span>Plugin<span>/</span><b>Org Flow</b></div>
+      <div class="titlerow">
+        <h1>Org Flow</h1>
+        <span class="live" id="live"><i></i>Live</span>
+        <span class="clock" id="clock">15:20</span>
+        <span class="tag">Prototipo · simulazione con task di esempio</span>
+        <div class="controls">
+          <button type="button" class="btn" id="pause" aria-pressed="false"><svg viewBox="0 0 12 12" id="pause-ic"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg><span id="pause-l">Pausa</span></button>
+          <label class="clock" for="pace">Ritmo</label>
+          <select id="pace" class="sel-in">
+            <option value="1600">Calmo</option>
+            <option value="1000" selected>Normale</option>
+            <option value="420">Frenetico</option>
+          </select>
+          <button type="button" class="btn" id="t-anat" aria-pressed="false">Come è fatto</button>
+        </div>
+      </div>
+      <p class="sub">Chi sta facendo cosa in questo momento, a che punto è ogni task e come passa da una persona all'altra. I colori sono i task padre.</p>
+      <div class="anat tr"><b>Slot <code>page</code></b>Pagina del plugin su <code>/franciuto.com/plugins/org-flow</code> (<code>ui.page.register</code>); il link nella barra laterale è uno slot <code>sidebar</code>.</div>
+    </header>
+
+    <section class="region" id="r-parents" aria-label="Task padre aperti">
+      <div class="parents" id="parents"></div>
+      <div class="anat br"><b>Task padre</b>Raggruppamento da <code>parentId</code> (<code>issue.subtree.read</code>). Nel plugin vero la percentuale del padre è sotto-task chiusi / totali; qui è la media delle percentuali, per vederla muoversi.</div>
+    </section>
+
+    <section class="kpis region" id="r-kpi" aria-label="Adesso">
+      <div class="kpi"><img id="ki-work" alt=""><div><div class="v" id="k-work">0</div><div class="l">Al lavoro</div></div></div>
+      <div class="kpi"><img id="ki-think" alt=""><div><div class="v" id="k-think">0</div><div class="l">Rivedono</div></div></div>
+      <div class="kpi"><img id="ki-sleep" alt=""><div><div class="v" id="k-sleep">0</div><div class="l">Dormono</div></div></div>
+      <button type="button" class="kpi click" id="k-wait-b"><img id="ki-wait" alt=""><div><div class="v" id="k-wait">0</div><div class="l">Aspettano te</div></div></button>
+      <div class="anat tr"><b>Stati degli agenti</b>Base da <code>agents.read</code> (<code>running</code> → al lavoro, <code>error</code> → confuso). Il resto lo decide il plugin: rivede se ha un task in revisione, dorme se è senza task da 5 minuti.</div>
+    </section>
+
+    <div class="main">
+      <section class="stage region" id="r-canvas" aria-label="Organigramma con i task">
+        <div class="canvas-scroll">
+          <svg id="org" viewBox="0 0 1000 820" role="img" aria-label="Organigramma di franciuto.com con i task in mano a ciascuno">
+            <g id="g-edges"></g>
+            <g id="g-nodes"></g>
+            <g id="g-fly"></g>
+          </svg>
+        </div>
+        <div class="legend">
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/></svg>Da fare</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><path d="M6 1.5a4.5 4.5 0 0 1 0 9z" style="fill:var(--fg)"/></svg>In corso</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><circle cx="6" cy="6" r="1.8" style="fill:var(--fg)"/></svg>In revisione</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><path d="M3 9 9 3" class="glyph"/></svg>Bloccato</span>
+          <span>Il riempimento del task è la percentuale di completamento</span>
+        </div>
+        <div class="anat tl"><b>Organigramma e personaggi</b>Struttura da <code>GET /api/companies/:id/org</code>. I personaggi sono quelli di Paperclip: <code>/api/agent-avatars/cap-v1/&lt;palette&gt;/&lt;posa&gt;.png</code> con le pose <code>idle · listening · thinking · working · success · confused · sleepy</code>. Se l'agente ha una foto caricata si usa quella.</div>
+        <div class="anat bl"><b>Movimento e percentuale</b>Worker: <code>ctx.events.on("issue.updated")</code> → <code>ctx.streams.emit("org-flow", …)</code> → UI <code>usePluginStream</code>. La percentuale del singolo task Paperclip non ce l'ha: la fornisce l'agente con uno strumento del plugin (<code>agent.tools.register</code>, es. <code>report_progress</code>) salvato con <code>ctx.state</code>, oppure si contano le caselle spuntate del documento di piano.</div>
+      </section>
+
+      <aside class="panel region" id="r-panel" aria-label="Dettaglio e attività">
+        <div id="sel"></div>
+        <header><h2>Attività in diretta</h2><span class="count" id="feed-count"></span></header>
+        <ol id="feed"></ol>
+        <div class="anat tr"><b>Pannello</b>Dettaglio con <code>issues.read</code>. "Approva" chiama un'azione del worker (<code>ctx.actions.register("approve")</code> → <code>usePluginAction</code>) che aggiorna il task con <code>issues.update</code>.</div>
+      </aside>
+    </div>
+
+    <section class="wp region" id="r-widget">
+      <div class="wp-copy">
+        <h2>Lo stesso plugin nella dashboard</h2>
+        <p>Un plugin può aggiungere anche un riquadro alla dashboard principale di Paperclip. Versione compatta: avanzamento dei task padre, chi lavora, chi dorme e cosa aspetta te.</p>
+      </div>
+      <div class="widget" aria-label="Anteprima del riquadro per la dashboard">
+        <div class="wtop"><span>Org Flow</span><span class="live" id="w-live"><i></i>Live</span></div>
+        <div id="w-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="wfoot" id="w-foot"></div>
+      </div>
+      <div class="anat tr"><b>Slot <code>dashboardWidget</code></b><code>ui.dashboardWidget.register</code>; legge lo stesso riepilogo del worker.</div>
+    </section>
+
+    <p class="foot">Prototipo statico. Persone, ruoli, catena di riporto e personaggi sono quelli dell'istanza al 18/11/2026; task, task padre, percentuali e passaggi sono inventati e generati dalla simulazione.</p>
+  </main>
+</div>
+
+<script>window.POSES = __POSES__;</script>
+<script>
+(() => {
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const BASE = 15 * 60 + 20;  // clock starts at 15:20
+const SLEEP_AFTER = 5;      // simulated minutes without tasks
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const POSES = window.POSES || {};
+
+/* ---------- People: real org of the instance ---------- */
+const PEOPLE = [
+  { id:"board",   name:"Board", title:"Tu · operatore umano", parent:null, human:true },
+  { id:"laura",   name:"Laura", title:"CEO", parent:"board", pal:"cherry-pop" },
+  { id:"giulia",  name:"Giulia Bennett", title:"Graphic Team Lead", parent:"laura", pal:"golden-hour" },
+  { id:"martina", name:"Martina Hayes", title:"Senior Designer", parent:"giulia", pal:"orchid-peach" },
+  { id:"sofia",   name:"Sofia Carter", title:"Junior Designer", parent:"giulia", pal:"pink-lemonade" },
+  { id:"iris",    name:"Iris Whitmore", title:"Communication Team Lead", parent:"laura", pal:"cherry-pop" },
+  { id:"jamal",   name:"Jamal Brooks", title:"CIO", parent:"laura", pal:"pink-lemonade" },
+  { id:"arold",   name:"Arold Fletcher", title:"Head of Systems & Networking", parent:"jamal", pal:"coral-current" },
+  { id:"luke",    name:"Luke Sullivan", title:"Infrastructure Manager - Home", parent:"arold", pal:"lime-lagoon" },
+  { id:"daniel",  name:"Daniel Harper", title:"Cloud SysAdmin", parent:"arold", pal:"tangerine-cobalt" },
+  { id:"joe",     name:"Joe", title:"Librarian", parent:"laura", pal:"violet-ember" },
+];
+const AGENT_IDS = {
+  laura:"e5e91e2f-ce90-446d-8357-153ae4fd23fd", giulia:"3f93a800-059c-4410-9f92-9a0ba43d998c",
+  martina:"f931e1bf-1948-4a00-b33f-660c41b20735", sofia:"ef701ac8-2909-40a3-ac05-f5db223ed7f6",
+  iris:"d0e66c03-c4e7-425c-a4cb-3d2e8b0ad1eb", jamal:"d76a085e-324e-4842-9127-abcb98060c24",
+  arold:"a30edce6-66f3-48a9-95a8-91d4ea4a1a9e", luke:"f73bb544-4886-4373-b04e-b17023d5ae28",
+  daniel:"22ea1ecf-c013-4d1c-b208-5fec9813be9a", joe:"ad774e83-110e-4e00-bec2-56c6b69afa0e",
+};
+const byId = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
+const kids = id => PEOPLE.filter(p => p.parent === id);
+let leaf = 0;
+(function place(id, depth){
+  const p = byId[id]; p.depth = depth; const ch = kids(id);
+  if (!ch.length) p.col = leaf++;
+  else { ch.forEach(c => place(c.id, depth + 1)); p.col = (ch[0].col + ch[ch.length - 1].col) / 2; }
+})("board", 0);
+PEOPLE.forEach(p => { p.x = 84 + p.col * 166; p.y = 60 + p.depth * 160; });
+const pose = (id, name) => { const p = byId[id]; return p.pal && POSES[p.pal] ? POSES[p.pal][name] || POSES[p.pal].idle : ""; };
+
+/* ---------- Statuses ---------- */
+const ST = { todo:["Da fare","--st-todo"], in_progress:["In corso","--st-progress"], in_review:["In revisione","--st-review"], blocked:["Bloccato","--st-blocked"], done:["Fatto","--st-done"] };
+const stColor = s => `var(${ST[s][1]})`;
+const stLabel = s => ST[s][0];
+
+/* ---------- Helpers ---------- */
+const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const fmt = m => { const tot = ((BASE + Math.floor(m)) % 1440 + 1440) % 1440; return String(Math.floor(tot / 60)).padStart(2,"0") + ":" + String(tot % 60).padStart(2,"0"); };
+const dur = m => { m = Math.max(0, Math.round(m)); if (m < 60) return m + " min"; const h = Math.floor(m / 60), r = m % 60; return r ? `${h} h ${r} min` : `${h} h`; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const first = id => byId[id].human ? "Board" : byId[id].name.split(" ")[0];
+const full = id => byId[id].human ? "Board (tu)" : byId[id].name;
+function el(tag, attrs = {}, parent){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+const mav = (id, p = "idle") => byId[id].human ? `<span class="mav" title="Board">TU</span>` : `<img class="mav" src="${pose(id, p)}" alt="" title="${esc(byId[id].name)}">`;
+const tint = (c, pct) => `color-mix(in oklch, ${c} ${pct}%, var(--bg))`;
+
+/* ---------- Parent tasks and subtasks ---------- */
+const B = "board", L = "laura";
+const GROUP_DEFS = [
+  { title:"Nuova identità visiva degli agenti", color:"oklch(62% .19 300)", templates:[
+    ["Icone di stato per gli agenti",[B,L,"giulia","sofia"]], ["Avatar per il riquadro della dashboard",[B,L,"giulia","martina"]] ] },
+  { title:"Homelab più robusto", color:"oklch(63% .12 190)", templates:[
+    ["Inventario delle porte su home-pi",[B,L,"jamal","arold","luke"]], ["Allarme sulla temperatura di ai-pi",[B,L,"jamal","arold","daniel"]] ] },
+  { title:"Lancio del plugin Org Flow", color:"oklch(58% .19 255)", templates:[
+    ["Riquadro per la dashboard",[B,L,"jamal","daniel"]], ["Prova del plugin sull'istanza",[B,L,"jamal","arold","luke"]] ] },
+  { title:"Comunicazione di dicembre", color:"oklch(71% .15 62)", templates:[
+    ["Calendario editoriale di gennaio",[B,L,"iris"]], ["Copertina del report trimestrale",[B,L,"iris","giulia","martina"]] ] },
+  { title:"Knowledge base dell'infrastruttura", color:"oklch(63% .16 145)", templates:[
+    ["Schede per i report di Arold",[B,L,"joe"]], ["Glossario dei servizi di ai-pi",[B,L,"joe"]], ["Pagina sul plugin Org Flow",[B,L,"joe"]] ] },
+];
+const GROUP_POOL = [
+  { title:"Sicurezza della rete di casa", color:"oklch(62% .2 18)", templates:[
+    ["Rete separata per i dispositivi IoT",[B,L,"jamal","arold","luke"]], ["Controllo delle password dei servizi",[B,L,"jamal","arold","daniel"]], ["Avviso in famiglia sul nuovo Wi-Fi",[B,L,"iris"]] ] },
+  { title:"Restyling del sito franciuto.com", color:"oklch(66% .13 215)", templates:[
+    ["Nuova home page",[B,L,"giulia","martina"]], ["Testi della pagina Chi sono",[B,L,"iris"]], ["Pubblicazione su home-pi",[B,L,"jamal","arold","luke"]] ] },
+  { title:"Archivio dei documenti di casa", color:"oklch(66% .15 110)", templates:[
+    ["Scansione delle bollette 2026",[B,L,"joe"]], ["Cartelle condivise su OneDrive",[B,L,"joe"]], ["Backup dell'archivio",[B,L,"jamal","arold","daniel"]] ] },
+];
+let groupSeq = 50, taskSeq = 55, poolIdx = 0;
+const groups = [], tasks = new Map(), log = [];
+let now = 0;
+const ps = Object.fromEntries(PEOPLE.map(p => [p.id, { emptySince:-30, flash:null, recv:0, sent:0 }]));
+
+function addGroup(def){
+  const g = { id:"FRA-" + (groupSeq++), title:def.title, color:def.color, templates:def.templates.map(t => [...t]), tasks:[], done:false, doneAt:0 };
+  groups.push(g); return g;
+}
+function newTask(g, title, route){
+  const t = { id:"FRA-" + (taskSeq++), title, group:g, route, idx:0, holder:"board", status:"todo", progress:0, nextAt:now + rand(1, 3), bounces:0, journey:[], events:[], blockedFrom:null, landAt:0, done:false, flying:false };
+  g.tasks.push(t); tasks.set(t.id, t); return t;
+}
+const worker = t => t.route[t.route.length - 1];
+const reviewer = t => t.route[t.route.length - 2];
+
+function record(t, kind, from, to, sFrom, sTo, at = now, extra = {}){
+  const e = { t:at, kind, task:t ? t.id : null, group:t ? t.group.id : extra.group, from, to, sFrom, sTo, ...extra };
+  log.push(e); if (t) t.events.push(e);
+  return e;
+}
+function move(t, to, status, kind){
+  const from = t.holder, sFrom = t.status;
+  t.holder = to; t.status = status;
+  t.journey.push({ who:to, since:now });
+  if (from !== to) { ps[from].sent++; ps[to].recv++; }
+  const e = record(t, kind, from, to, sFrom, status, now, { progress:t.progress });
+  if (!heldBy(from).length) ps[from].emptySince = now;
+  if (from !== to) launch(t, from, to, kind);
+  newEvents++;
+  return e;
+}
+const openTasks = () => [...tasks.values()].filter(t => !t.done);
+const heldBy = id => openTasks().filter(t => t.holder === id);
+
+/* ---------- Seed: a plausible "right now" ---------- */
+function seed(g, title, route, stopIdx, status, progress, opt = {}){
+  const t = newTask(g, title, route);
+  let at = -rand(40, 70);
+  const ev = (kind, from, to, sFrom, sTo) => { record(t, kind, from, to, sFrom, sTo, at, { progress:t.progress }); t.journey.push({ who:to, since:at }); };
+  t.journey = [];
+  ev("created", null, B, null, "todo");
+  for (let k = 1; k <= stopIdx; k++) { at += rand(2, 6); ev("delegate", route[k - 1], route[k], "todo", k === route.length - 1 ? "in_progress" : "todo"); }
+  t.idx = stopIdx; t.holder = route[stopIdx]; t.status = stopIdx === route.length - 1 ? "in_progress" : "todo"; t.progress = progress;
+  if (opt.review) { at += rand(8, 20); t.progress = 100; ev("submit", worker(t), reviewer(t), "in_progress", "in_review"); t.holder = reviewer(t); t.status = "in_review"; }
+  if (opt.blocked) { at += rand(5, 12); ev("blocked", worker(t), B, "in_progress", "blocked"); t.holder = B; t.status = "blocked"; t.blockedFrom = worker(t); }
+  if (opt.done) { at += rand(8, 15); t.progress = 100; ev("submit", worker(t), reviewer(t), "in_progress", "in_review"); at += 3; ev("approve", reviewer(t), reviewer(t), "in_review", "done"); t.holder = reviewer(t); t.status = "done"; t.done = true; }
+  if (status === "todo" && !opt.review && !opt.blocked) t.status = "todo";
+  t.nextAt = rand(1, 4);
+}
+const [g0, g1, g2, g3, g4] = GROUP_DEFS.map(addGroup);
+seed(g0, "Pose degli avatar per i reparti", [B,L,"giulia","sofia"], 3, "in_progress", 45);
+seed(g0, "Palette uniforme per gli sfondi", [B,L,"giulia","martina"], 3, "in_progress", 72);
+seed(g0, "Guida all'uso degli avatar", [B,L,"giulia"], 2, "in_progress", 100, { review:true });
+seed(g1, "Backup di Postgres fuori dalla microSD", [B,L,"jamal","arold","daniel"], 4, "in_progress", 30);
+seed(g1, "Aggiornare Paperclip alla 2026.1106.0", [B,L,"jamal","arold","luke"], 4, "in_progress", 55, { blocked:true });
+seed(g1, "Rotazione del log service.out", [B,L,"jamal","arold","luke"], 3, "todo", 0);
+seed(g2, "Worker del plugin: eventi e stream", [B,L,"jamal","daniel"], 3, "in_progress", 18);
+seed(g2, "Pagina React dell'organigramma", [B,L,"jamal","giulia","martina"], 2, "todo", 0);
+seed(g3, "Newsletter di dicembre", [B,L,"iris"], 2, "in_progress", 60);
+seed(g3, "Post LinkedIn sul nuovo homelab", [B,L,"iris","giulia","sofia"], 3, "todo", 0);
+seed(g4, "Indice della knowledge base homelab", [B,L,"joe"], 2, "in_progress", 100, { done:true });
+log.sort((a, b) => a.t - b.t);
+ps.joe.emptySince = -20; ps.luke.emptySince = -12;
+
+/* ---------- Simulation ---------- */
+let newEvents = 0;
+function activeTaskOf(id){
+  const ip = heldBy(id).filter(t => t.status === "in_progress" && !t.flying);
+  if (!ip.length) return null;
+  return ip.reduce((a, b) => (a.journey[a.journey.length - 1].since >= b.journey[b.journey.length - 1].since ? a : b));
+}
+function flash(id, type, ms = 2600){ if (id && !byId[id].human) ps[id].flash = { type, until:performance.now() + ms }; }
+
+function tick(){
+  now++;
+  const working = new Set();
+  for (const p of PEOPLE) { const a = activeTaskOf(p.id); if (a) working.add(a.id); }
+  const blockedNow = openTasks().filter(t => t.status === "blocked").length;
+  for (const t of openTasks()) {
+    if (t.flying) continue;
+    if (t.status === "todo" && now >= t.nextAt) {
+      const nextIdx = t.idx + 1, to = t.route[nextIdx];
+      const isWorker = nextIdx === t.route.length - 1;
+      t.idx = nextIdx;
+      move(t, to, isWorker ? "in_progress" : "todo", "delegate");
+      t.nextAt = now + rand(2, 4);
+    } else if (t.status === "in_progress" && working.has(t.id)) {
+      t.progress = Math.min(100, t.progress + rand(2, 7));
+      if (t.progress >= 100) {
+        move(t, reviewer(t), "in_review", "submit");
+        t.nextAt = now + rand(3, 6);
+      } else if (t.progress > 25 && t.progress < 70 && blockedNow < 2 && Math.random() < .007) {
+        t.blockedFrom = t.holder;
+        move(t, B, "blocked", "blocked");
+      }
+    } else if (t.status === "in_review" && now >= t.nextAt) {
+      const ok = Math.random() < (t.bounces ? .9 : .68);
+      const rev = t.holder;
+      if (ok) {
+        t.status = "done"; t.done = true; t.progress = 100;
+        record(t, "approve", rev, rev, "in_review", "done", now, { progress:100 }); newEvents++;
+        if (!heldBy(rev).length) ps[rev].emptySince = now;
+        flash(rev, "success"); flash(worker(t), "success");
+      } else {
+        t.bounces++; t.progress = rand(55, 78);
+        move(t, worker(t), "in_progress", "sentback");
+      }
+    }
+  }
+  // parent completion and new work
+  for (const g of groups) {
+    if (!g.done && !g.templates.length && g.tasks.length && g.tasks.every(x => x.done)) {
+      g.done = true; g.doneAt = now;
+      record(null, "group_done", null, null, null, null, now, { group:g.id }); newEvents++;
+      flash("laura", "success", 3200);
+    }
+  }
+  for (let i = groups.length - 1; i >= 0; i--) {
+    if (groups[i].done && now - groups[i].doneAt > 6) { groups.splice(i, 1); addGroup(GROUP_POOL[poolIdx++ % GROUP_POOL.length]); }
+  }
+  if (openTasks().length < 10 && Math.random() < .3) {
+    const cand = groups.filter(g => !g.done && g.templates.length);
+    if (cand.length) {
+      const g = cand[Math.floor(Math.random() * cand.length)];
+      const [title, route] = g.templates.shift();
+      const t = newTask(g, title, route);
+      t.journey.push({ who:B, since:now });
+      record(t, "created", null, B, null, "todo", now, { progress:0 }); newEvents++;
+    }
+  }
+  render();
+}
+
+/* ---------- Visual state of a person ---------- */
+function visual(p){
+  const held = heldBy(p.id).filter(t => !t.flying);
+  if (p.human) {
+    const w = held.filter(t => t.status === "blocked");
+    return w.length ? { state:"waiting", label:`${w.length === 1 ? "1 decisione" : w.length + " decisioni"} per te` } : { state:"idle", label:"Nessuna richiesta" };
+  }
+  const f = ps[p.id].flash;
+  const a = activeTaskOf(p.id);
+  if (f && f.until > performance.now()) {
+    const map = { listening:"Ha ricevuto un task", success:"Fatto!", confused:"Rimandato indietro" };
+    return { state:f.type, label:f.label || map[f.type], pose:f.type };
+  }
+  if (a) return { state:"working", label:`Lavora su ${a.id} · ${a.progress}%`, pose:"working" };
+  const rv = held.find(t => t.status === "in_review");
+  if (rv) return { state:"thinking", label:`Rivede ${rv.id}`, pose:"thinking" };
+  if (held.length) return { state:"idle", label: held.length === 1 ? `Smista ${held[0].id}` : `Smista ${held.length} task`, pose:"idle" };
+  if (now - ps[p.id].emptySince >= SLEEP_AFTER) return { state:"sleepy", label:`Dorme da ${dur(now - ps[p.id].emptySince)}`, pose:"sleepy" };
+  return { state:"idle", label:"Libero", pose:"idle" };
+}
+
+/* ---------- SVG build ---------- */
+const gEdges = document.getElementById("g-edges"), gNodes = document.getElementById("g-nodes"), gFly = document.getElementById("g-fly");
+for (const p of PEOPLE) for (const c of kids(p.id)) {
+  el("path", { d:`M${p.x} ${p.y + 100} V${p.y + 110} H${c.x} V${c.y - 46}`, class:"edge" + (p.human ? " assign" : "") }, gEdges);
+}
+const CHIP_W = 77, CHIP_H = 16;
+const nodeEls = {};
+for (const p of PEOPLE) {
+  const outer = el("g", { transform:`translate(${p.x} ${p.y})` }, gNodes);
+  const g = el("g", { class:"node", tabindex:"0", role:"button", "aria-label":`${p.name}, ${p.title}`, "data-state":"idle" }, outer);
+  el("rect", { class:"hit", x:-76, y:-48, width:152, height:96 }, g);
+  el("circle", { class:"halo", cx:0, cy:-10, r:31 }, g);
+  const bob = el("g", { class:"bob" }, g);
+  let img = null;
+  if (p.human) {
+    el("circle", { class:"board-av", cx:0, cy:-10, r:24 }, bob);
+    el("circle", { class:"board-ic", cx:0, cy:-16, r:7 }, bob);
+    el("path", { class:"board-ic", d:"M-12 4 C-10 -6 10 -6 12 4 Z" }, bob);
+  } else {
+    img = el("image", { x:-32, y:-44, width:64, height:64, href:pose(p.id, "idle") }, bob);
+  }
+  const fx = el("g", { class:"fx" }, g);
+  const z = el("g", { class:"zzz" }, fx);
+  [["z",20,-26,10],["z",24,-32,12],["Z",28,-38,14]].forEach(([c,x,y,s]) => { const t = el("text", { x, y, "font-size":s }, z); t.textContent = c; });
+  const ty = el("g", { class:"typing", transform:"translate(22 -6)" }, fx);
+  el("rect", { x:0, y:-7, width:26, height:14, rx:7 }, ty);
+  [6,13,20].forEach(x => el("circle", { cx:x, cy:0, r:2 }, ty));
+  const th = el("g", { class:"thought", transform:"translate(22 -38)" }, fx);
+  el("circle", { class:"b", cx:-2, cy:16, r:2 }, th);
+  el("circle", { class:"b", cx:2, cy:10, r:3 }, th);
+  el("ellipse", { cx:14, cy:0, rx:14, ry:9 }, th);
+  [8,14,20].forEach(x => el("circle", { class:"d", cx:x, cy:0, r:1.8 }, th));
+  const bang = el("g", { class:"bang", transform:"translate(25 -36)" }, fx);
+  el("circle", { r:8 }, bang);
+  const bt = el("text", { "text-anchor":"middle", "dominant-baseline":"central", y:.5 }, bang); bt.textContent = "!";
+  const sp = el("g", { class:"spark" }, fx);
+  [[-30,-34],[30,-36],[-36,-6],[36,-4],[0,-50],[-20,-48]].forEach(([x,y]) => el("path", { d:`M${x} ${y-4} L${x+2} ${y} L${x} ${y+4} L${x-2} ${y} Z` }, sp));
+  const badge = el("g", { class:"badge", transform:"translate(-26 -34)" }, g);
+  el("circle", { r:8.5 }, badge);
+  const bcount = el("text", { "text-anchor":"middle", "dominant-baseline":"central" }, badge);
+  const nm = el("text", { class:"nm", "text-anchor":"middle", y:34 }, g); nm.textContent = p.human ? "Board (tu)" : p.name;
+  const stl = el("text", { class:"stl", "text-anchor":"middle", y:48 }, g);
+  const tip = el("title", {}, g); tip.textContent = `${p.name} · ${p.title}`;
+  const chips = el("g", { transform:"translate(0 56)" }, outer);
+  const pick = () => select({ type:"person", id:p.id });
+  g.addEventListener("click", pick);
+  g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } });
+  nodeEls[p.id] = { g, img, badge, bcount, stl, chips, chipMap:new Map(), lastPose:"idle", lastState:"" };
+}
+
+function glyph(parent, status){
+  parent.replaceChildren();
+  el("circle", { cx:0, cy:0, r:4.2, class:"glyph" }, parent);
+  if (status === "in_progress") el("path", { d:"M0 -4.2 A4.2 4.2 0 0 1 0 4.2 Z", class:"f" }, parent);
+  if (status === "in_review") el("circle", { r:1.7, class:"f" }, parent);
+  if (status === "blocked") el("path", { d:"M-3 3 L3 -3", class:"glyph" }, parent);
+  if (status === "done") el("path", { d:"M-2.2 0 L-.6 1.8 L2.4 -1.6", class:"glyph" }, parent);
+}
+function makeChip(t){
+  const pos = el("g", {});
+  const c = el("g", { class:"chip", tabindex:"0", role:"button" }, pos);
+  const inn = el("g", { class:"in" }, c);
+  const col = t.group.color;
+  el("rect", { class:"cbg", width:CHIP_W, height:CHIP_H, rx:4, style:`fill:${tint(col, 16)};stroke:${col}` }, inn);
+  const fill = el("rect", { class:"cfill", width:CHIP_W, height:CHIP_H, rx:4, style:`fill:${tint(col, 48)};transform:scaleX(${t.progress / 100})` }, inn);
+  const gl = el("g", { transform:"translate(8 8)" }, inn);
+  const id = el("text", { x:14.5, y:11.2 }, inn); id.textContent = t.id;
+  const pc = el("text", { class:"pc", x:CHIP_W - 3.5, y:11.2, "text-anchor":"end" }, inn);
+  const tip = el("title", {}, c);
+  const go = ev => { ev.stopPropagation(); select({ type:"task", id:t.id }); };
+  c.addEventListener("click", go);
+  c.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(ev); } });
+  return { pos, c, fill, gl, pc, tip, status:null };
+}
+
+/* ---------- Flights ---------- */
+const flights = [];
+function launch(t, from, to, kind){
+  const land = () => {
+    t.flying = false;
+    if (!byId[to].human) {
+      if (kind === "sentback") flash(to, "confused");
+      else if (kind !== "approve") flash(to, "listening");
+    }
+    render();
+  };
+  if (reduced) { land(); return; }
+  t.flying = true;
+  const a = byId[from], b = byId[to];
+  const A = { x:a.x, y:a.y + 64 }, Bp = { x:b.x, y:b.y + 64 };
+  const mx = (A.x + Bp.x) / 2, my = Math.min(A.y, Bp.y) - 40 - Math.abs(A.x - Bp.x) * .12;
+  const C = { x:mx, y:my };
+  const col = t.group.color;
+  const trail = el("g", { class:"trail" }, gFly);
+  const dots = [0,1,2,3,4,5].map(i => el("circle", { r:3.4 - i * .45, style:`fill:${col};opacity:${.5 - i * .07}` }, trail));
+  const g = el("g", { class:"fly" }, gFly);
+  el("rect", { class:"cbg", x:-CHIP_W / 2, y:-CHIP_H / 2, width:CHIP_W, height:CHIP_H, rx:4, style:`fill:${tint(col, 40)};stroke:${col}` }, g);
+  const tx = el("text", { "text-anchor":"middle", y:3.3 }, g); tx.textContent = t.id;
+  flights.push({ g, trail, dots, A, B:Bp, C, start:performance.now(), dur:1050, land });
+}
+const qpt = (A, C, B, k) => ({ x:(1-k)*(1-k)*A.x + 2*(1-k)*k*C.x + k*k*B.x, y:(1-k)*(1-k)*A.y + 2*(1-k)*k*C.y + k*k*B.y });
+function frame(ts){
+  for (let i = flights.length - 1; i >= 0; i--) {
+    const f = flights[i], k = (ts - f.start) / f.dur;
+    if (k >= 1) { f.g.remove(); f.trail.remove(); flights.splice(i, 1); f.land(); continue; }
+    const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const p = qpt(f.A, f.C, f.B, e);
+    f.g.setAttribute("transform", `translate(${p.x} ${p.y})`);
+    f.dots.forEach((d, j) => { const q = qpt(f.A, f.C, f.B, Math.max(0, e - (j + 1) * .045)); d.setAttribute("cx", q.x); d.setAttribute("cy", q.y); });
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- Render ---------- */
+let sel = null, focus = null, lastLogLen = 0, rawOpen = false;
+function render(){
+  const touched = new Set(); let touchColor = null;
+  if (sel?.type === "task") { const t = tasks.get(sel.id); if (t) { t.journey.forEach(j => touched.add(j.who)); touchColor = t.group.color; } }
+  const counts = { working:0, thinking:0, sleepy:0 };
+  for (const p of PEOPLE) {
+    const n = nodeEls[p.id], v = visual(p);
+    if (counts[v.state] !== undefined && !p.human) counts[v.state]++;
+    if (n.lastState !== v.state) { n.g.setAttribute("data-state", v.state); n.lastState = v.state; }
+    if (n.img && v.pose && n.lastPose !== v.pose) { n.img.setAttribute("href", pose(p.id, v.pose)); n.lastPose = v.pose; }
+    n.stl.textContent = v.label;
+    n.g.classList.toggle("sel", sel?.type === "person" && sel.id === p.id);
+    n.g.classList.toggle("touched", touched.has(p.id) && !(sel?.type === "person"));
+    if (touchColor) n.g.style.setProperty("--tc", touchColor);
+    const held = heldBy(p.id).filter(t => !t.flying).sort((a, b) => groups.indexOf(a.group) - groups.indexOf(b.group) || a.id.localeCompare(b.id));
+    n.g.classList.toggle("dimmed", !!focus && !held.some(t => t.group.id === focus) && !(sel?.type === "task" && touched.has(p.id)));
+    n.badge.style.display = held.length ? "" : "none";
+    n.bcount.textContent = held.length;
+    // keyed chips, 2 per row, max 4
+    const show = held.length > 4 ? held.slice(0, 3) : held;
+    const keep = new Set(show.map(t => t.id));
+    for (const [id, ch] of n.chipMap) if (!keep.has(id)) { ch.pos.remove(); n.chipMap.delete(id); }
+    show.forEach((t, i) => {
+      let ch = n.chipMap.get(t.id);
+      if (!ch) { ch = makeChip(t); n.chipMap.set(t.id, ch); n.chips.appendChild(ch.pos); }
+      const col = i % 2, row = Math.floor(i / 2);
+      const rowCount = Math.min(2, show.length - row * 2) + (held.length > 4 && row === 1 ? 1 : 0);
+      const rowW = rowCount * CHIP_W + (rowCount - 1) * 4;
+      ch.pos.setAttribute("transform", `translate(${-rowW / 2 + col * (CHIP_W + 4)} ${row * (CHIP_H + 4)})`);
+      if (ch.status !== t.status) { glyph(ch.gl, t.status); ch.status = t.status; }
+      ch.fill.style.transform = `scaleX(${t.progress / 100})`;
+      ch.pc.textContent = t.progress + "%";
+      ch.tip.textContent = `${t.id} · ${t.title} — ${stLabel(t.status)}, ${t.progress}% · ${t.group.title}`;
+      ch.c.classList.toggle("sel", sel?.type === "task" && sel.id === t.id);
+      ch.c.classList.toggle("dim", !!focus && t.group.id !== focus);
+    });
+    let more = n.chips.querySelector(".more");
+    if (held.length > 4) {
+      if (!more) { more = el("text", { class:"more" }, n.chips); }
+      more.setAttribute("x", 4); more.setAttribute("y", CHIP_H + 4 + 11.5);
+      more.textContent = `+${held.length - 3} altri`;
+      n.chips.appendChild(more);
+    } else if (more) more.remove();
+  }
+  const wait = heldBy(B).filter(t => t.status === "blocked").length;
+  document.getElementById("k-work").textContent = counts.working;
+  document.getElementById("k-think").textContent = counts.thinking;
+  document.getElementById("k-sleep").textContent = counts.sleepy;
+  document.getElementById("k-wait").textContent = wait;
+  document.getElementById("k-wait-b").classList.toggle("warn", wait > 0);
+  document.getElementById("clock").textContent = fmt(now);
+  renderParents(); renderFeed(); renderSel(); renderWidget();
+}
+
+function groupStats(g){
+  const n = g.tasks.length + g.templates.length;
+  const done = g.tasks.filter(t => t.done).length;
+  const pct = n ? Math.round(g.tasks.reduce((s, t) => s + t.progress, 0) / n) : 0;
+  const holders = [...new Set(g.tasks.filter(t => !t.done).map(t => t.holder))];
+  return { n, done, pct:g.done ? 100 : pct, holders };
+}
+function renderParents(){
+  const box = document.getElementById("parents");
+  box.innerHTML = groups.map(g => {
+    const s = groupStats(g);
+    const heads = s.holders.slice(0, 5).map(h => byId[h].human ? `<span class="mav" title="Board">TU</span>` : `<img src="${pose(h, "idle")}" alt="" title="${esc(byId[h].name)}">`).join("");
+    return `<button type="button" class="pcard${g.done ? " done" : ""}${focus && focus !== g.id ? " dim" : ""}" data-group="${g.id}" aria-pressed="${focus === g.id}" style="--gc:${g.color}">
+      <span class="ptop"><span class="sw"></span><span class="idm">${g.id}</span><span class="ptitle">${esc(g.title)}</span></span>
+      <span class="pbar"><i style="width:${s.pct}%"></i></span>
+      <span class="pmeta"><span>${g.done ? "Completato" : `<b>${s.done}</b>/${s.n} chiusi · <b>${s.pct}%</b>`}</span><span class="heads">${heads}</span></span>
+    </button>`;
+  }).join("");
+}
+document.getElementById("parents").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-group]"); if (!b) return;
+  focus = focus === b.dataset.group ? null : b.dataset.group; render();
+});
+
+function eventLine(e){
+  const P = e.progress !== undefined ? ` <em>${e.progress}%</em>` : "";
+  switch (e.kind) {
+    case "created": return `<div class="fl1">${mav(B)}<span>Nuovo task dal board</span></div>`;
+    case "delegate": return `<div class="fl1">${mav(e.from)}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "listening")}<b>${esc(first(e.to))}</b><em>assegnato</em></div>`;
+    case "submit": return `<div class="fl1">${mav(e.from, "success")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "thinking")}<b>${esc(first(e.to))}</b><em>da rivedere</em></div>`;
+    case "approve": return `<div class="fl1">${mav(e.from, "success")}<b>${esc(first(e.from))}</b><em>ha approvato, fatto</em></div>`;
+    case "sentback": return `<div class="fl1">${mav(e.from, "thinking")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "confused")}<b>${esc(first(e.to))}</b><em>rimandato indietro</em>${P}</div>`;
+    case "blocked": return `<div class="fl1">${mav(e.from, "confused")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(B)}<b>Board</b><em>serve una tua decisione</em></div>`;
+    case "unblock": return `<div class="fl1">${mav(B)}<span>Board</span><span class="arrow">→</span>${mav(e.to, "listening")}<b>${esc(first(e.to))}</b><em>approvato da te</em></div>`;
+    case "changes": return `<div class="fl1">${mav(B)}<span>Board</span><span class="arrow">→</span>${mav(e.to, "confused")}<b>${esc(first(e.to))}</b><em>chiedi modifiche</em></div>`;
+    case "group_done": return `<div class="fl1">${mav(L, "success")}<b>Task padre completato</b></div>`;
+  }
+  return "";
+}
+function gref(e){
+  const g = groups.find(x => x.id === e.group) || { color:"var(--edge)", title:"" };
+  if (e.kind === "group_done") return `<div class="fl2"><span class="sw" style="--gc:${g.color}"></span><span class="idm">${e.group}</span><span>${esc(g.title)}</span></div>`;
+  const t = tasks.get(e.task);
+  return `<div class="fl2"><span class="sw" style="--gc:${t.group.color}"></span><span class="idm">${t.id}</span><span>${esc(t.title)}</span></div>`;
+}
+function renderFeed(){
+  const feed = document.getElementById("feed");
+  const fresh = log.length - lastLogLen;
+  const key = log.length + "|" + (sel?.type === "task" ? sel.id : "");
+  if (feed.dataset.key === key) return;
+  feed.dataset.key = key;
+  const evs = log.slice(-60).reverse();
+  feed.innerHTML = evs.map((e, i) => `<li class="${sel?.type === "task" && e.task === sel.id ? "on" : ""}${i < fresh && lastLogLen ? " new" : ""}"><button type="button" ${e.task ? `data-task="${e.task}"` : `data-group="${e.group}"`}><span class="ft">${fmt(e.t)}</span><span>${eventLine(e)}${gref(e)}</span></button></li>`).join("");
+  lastLogLen = log.length;
+  document.getElementById("feed-count").textContent = `${log.length} eventi`;
+}
+document.getElementById("feed").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  if (b.dataset.task) select({ type:"task", id:b.dataset.task });
+  else if (b.dataset.group) { focus = b.dataset.group; render(); }
+});
+
+function rawRow(t){
+  const e = t.events[t.events.length - 1];
+  const who = w => (w && w !== B) ? AGENT_IDS[w] : null;
+  const changes = {};
+  if (e.from !== e.to) {
+    changes.assigneeAgentId = { from:who(e.from), to:who(e.to) };
+    if (e.from === B || e.to === B) changes.assigneeUserId = { from: e.from === B ? "<utente board>" : null, to: e.to === B ? "<utente board>" : null };
+  }
+  if (e.sFrom !== e.sTo) changes.status = { from:e.sFrom, to:e.sTo };
+  return {
+    activity: { action: e.kind === "created" ? "issue.created" : "issue.updated", entityType:"issue", details:{ identifier:t.id, parentIdentifier:t.group.id, changes } },
+    pluginState: { scopeKind:"issue", stateKey:"org-flow.progress", value:{ percent:t.progress, reportedBy: t.holder === B ? null : AGENT_IDS[worker(t)] } },
+  };
+}
+function renderSel(){
+  const box = document.getElementById("sel");
+  if (!sel) { box.innerHTML = ""; return; }
+  if (sel.type === "task") {
+    const t = tasks.get(sel.id); if (!t) { box.innerHTML = ""; return; }
+    const rows = t.journey.map((j, i) => {
+      const next = t.journey[i + 1], cur = !next && !t.done;
+      const end = next ? next.since : now;
+      return `<li class="${cur ? "cur" : ""}"><span class="n">${i + 1}</span>${mav(j.who)}<span>${esc(full(j.who))} <span class="idm">${fmt(j.since)}</span></span><span class="d">${cur ? "da " : ""}${dur(end - j.since)}</span></li>`;
+    }).join("");
+    const ask = t.status === "blocked" ? `<div class="ask"><span><b>${esc(first(t.blockedFrom))}</b> chiede una tua decisione per andare avanti.</span><span class="acts"><button type="button" class="primary" data-act="approve" data-task="${t.id}">Approva</button><button type="button" class="ghost" data-act="changes" data-task="${t.id}">Chiedi modifiche</button></span></div>` : "";
+    box.innerHTML = `<div class="card">
+      <div class="card-top"><div class="pills"><span class="idm">${t.id}</span><span class="pill"><i style="background:${stColor(t.status)}"></i>${stLabel(t.status)}</span>${t.bounces ? `<span class="pill">Rimandato ${t.bounces}×</span>` : ""}</div><button class="x" type="button" data-close aria-label="Chiudi">×</button></div>
+      <h3>${esc(t.title)}</h3>
+      <div class="gline" style="--gc:${t.group.color}"><span class="sw"></span><span>Parte di <b>${t.group.id}</b> · ${esc(t.group.title)}</span></div>
+      <div class="bigbar" style="--gc:${t.group.color}"><span class="pbar"><i style="width:${t.progress}%"></i></span><b>${t.progress}%</b></div>
+      ${ask}
+      <div class="meta">${t.done ? "Chiuso" : "In mano a " + esc(full(t.holder))} · ${t.journey.length - 1} passaggi</div>
+      <ol class="path">${rows}</ol>
+      <details ${rawOpen ? "open" : ""} id="raw"><summary>Dati che il plugin leggerebbe</summary><pre>${esc(JSON.stringify(rawRow(t), null, 2))}</pre></details>
+    </div>`;
+  } else {
+    const p = byId[sel.id], v = visual(p);
+    const held = heldBy(p.id).sort((a, b) => groups.indexOf(a.group) - groups.indexOf(b.group));
+    const list = held.length ? `<div class="tasklist">${held.map(t => `<button type="button" class="trow" data-task="${t.id}" style="--gc:${t.group.color}"><span class="sw"></span><span class="t">${t.id} · ${esc(t.title)}</span><span class="p">${t.status === "blocked" ? "bloccato" : t.progress + "%"}</span></button>`).join("")}</div>` : `<div class="meta">Nessun task in mano.</div>`;
+    const big = p.human ? `<span class="mav" style="width:56px;height:56px;font-size:15px">TU</span>` : `<img src="${pose(p.id, v.pose || "idle")}" alt="">`;
+    box.innerHTML = `<div class="card">
+      <div class="card-top"><div class="who">${big}<div><h3>${esc(full(p.id))}</h3><div class="meta">${esc(p.title)}</div><div class="meta"><b>${esc(v.label)}</b></div></div></div><button class="x" type="button" data-close aria-label="Chiudi">×</button></div>
+      <div class="stats"><div><b>${held.length}</b><span>in mano</span></div><div><b>${ps[p.id].recv}</b><span>ricevuti</span></div><div><b>${ps[p.id].sent}</b><span>passati</span></div></div>
+      ${list}
+    </div>`;
+  }
+  const raw = document.getElementById("raw");
+  if (raw) raw.addEventListener("toggle", () => { rawOpen = raw.open; });
+}
+document.getElementById("sel").addEventListener("click", ev => {
+  if (ev.target.closest("[data-close]")) { select(null); return; }
+  const act = ev.target.closest("[data-act]");
+  if (act) {
+    const t = tasks.get(act.dataset.task);
+    if (t && t.status === "blocked") {
+      if (act.dataset.act === "approve") move(t, t.blockedFrom, "in_progress", "unblock");
+      else { t.progress = Math.max(5, t.progress - 15); move(t, t.blockedFrom, "in_progress", "changes"); }
+      render();
+    }
+    return;
+  }
+  const b = ev.target.closest("[data-task]"); if (b) select({ type:"task", id:b.dataset.task });
+});
+function select(s){ sel = s; render(); }
+
+function renderWidget(){
+  document.getElementById("w-rows").innerHTML = groups.map(g => {
+    const s = groupStats(g);
+    return `<div class="wrow" style="--gc:${g.color}"><span class="t"><span class="sw"></span><span>${esc(g.title)}</span></span><span class="pbar"><i style="width:${s.pct}%"></i></span><b>${s.pct}%</b></div>`;
+  }).join("");
+  const wait = heldBy(B).filter(t => t.status === "blocked").length;
+  const st = PEOPLE.filter(p => !p.human).map(visual);
+  document.getElementById("w-foot").innerHTML =
+    `<span><b>${st.filter(v => v.state === "working").length}</b> al lavoro</span><span><b>${st.filter(v => v.state === "sleepy").length}</b> dormono</span>` +
+    (wait ? `<span class="w">${wait === 1 ? "1 task aspetta" : wait + " task aspettano"} te</span>` : `<span>Niente da approvare</span>`);
+}
+
+/* ---------- KPI icons (real poses) ---------- */
+document.getElementById("ki-work").src = pose("sofia", "working");
+document.getElementById("ki-think").src = pose("laura", "thinking");
+document.getElementById("ki-sleep").src = pose("joe", "sleepy");
+document.getElementById("ki-wait").src = pose("luke", "confused");
+document.getElementById("k-wait-b").addEventListener("click", () => select({ type:"person", id:B }));
+
+/* ---------- Controls ---------- */
+let timer = null, paused = false;
+function schedule(){ clearInterval(timer); if (!paused) timer = setInterval(tick, +document.getElementById("pace").value); }
+document.getElementById("pace").addEventListener("change", schedule);
+document.getElementById("pause").addEventListener("click", ev => {
+  paused = !paused; ev.currentTarget.setAttribute("aria-pressed", paused);
+  document.getElementById("pause-l").textContent = paused ? "Riprendi" : "Pausa";
+  document.getElementById("pause-ic").innerHTML = paused ? '<path d="M2 1l9 5-9 5z"/>' : '<path d="M2 1h3v10H2zM7 1h3v10H7z"/>';
+  for (const id of ["live","w-live"]) { const l = document.getElementById(id); l.classList.toggle("off", paused); l.lastChild.textContent = paused ? "In pausa" : "Live"; }
+  schedule();
+});
+document.getElementById("t-anat").addEventListener("click", ev => { const on = !document.body.classList.contains("anat-on"); document.body.classList.toggle("anat-on", on); ev.currentTarget.setAttribute("aria-pressed", on); });
+
+render();
+schedule();
+requestAnimationFrame(frame);
+})();
+</script>
