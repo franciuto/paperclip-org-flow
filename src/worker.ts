@@ -1,97 +1,99 @@
-import { randomUUID } from "node:crypto";
-import { definePlugin, runWorker, type PluginContext, type PluginEvent } from "@paperclipai/plugin-sdk";
-import { pushRecent, recordFromIssueEvent, recordFromRunEvent, type FeedRecord, type Party } from "./worker/feed.js";
+import { definePlugin, runWorker, type PluginContext } from "@paperclipai/plugin-sdk";
+import {
+  ACTION_PING, ACTION_REFRESH, DATA_EVENTS, DATA_SNAPSHOT, TOOL_REPORT_PROGRESS,
+} from "./shared/types.js";
+import { createOrgFlowService, type OrgFlowService } from "./worker/service.js";
+import { validateSettings } from "./worker/settings.js";
+import { REPORT_PROGRESS_TOOL } from "./worker/tool.js";
 
-const CHANNEL = "feed";
-const MAX_RECENT = 100;
+/** Events that change what the org chart shows. */
+const SUBSCRIBED_EVENTS = [
+  "issue.created",
+  "issue.updated",
+  "issue.document.created",
+  "issue.document.updated",
+  "issue.document.deleted",
+  "agent.created",
+  "agent.updated",
+  "agent.status_changed",
+  "agent.error_cleared",
+  "agent.run.started",
+  "agent.run.finished",
+  "agent.run.failed",
+  "agent.run.cancelled",
+] as const;
+
+let service: OrgFlowService | null = null;
+
+/** Host-authorized company wins over the one in params (the host injects it for data calls). */
+function companyOf(params: Record<string, unknown> | undefined, scoped?: string | null): string | null {
+  if (typeof scoped === "string" && scoped) return scoped;
+  const c = params?.companyId;
+  return typeof c === "string" && c ? c : null;
+}
 
 const plugin = definePlugin({
+  multiCompanyConfig: true,
+
   async setup(ctx: PluginContext) {
-    const recent = new Map<string, FeedRecord[]>();
-    const agentNames = new Map<string, string>();
-    let openedFor: string | null = null;
+    const svc = createOrgFlowService(ctx);
+    service = svc;
 
-    const stateKey = (companyId: string) => ({ scopeKind: "company" as const, scopeId: companyId, stateKey: "recent-feed" });
+    for (const name of SUBSCRIBED_EVENTS) ctx.events.on(name, (ev) => svc.handleEvent(ev));
 
-    async function load(companyId: string): Promise<FeedRecord[]> {
-      let list = recent.get(companyId);
-      if (!list) {
-        const stored = await ctx.state.get(stateKey(companyId)).catch(() => null);
-        list = Array.isArray(stored) ? (stored as FeedRecord[]) : [];
-        recent.set(companyId, list);
-      }
-      return list;
-    }
-
-    async function nameOf(p: Party | undefined, companyId: string): Promise<Party | undefined> {
-      if (!p || p.kind !== "agent") return p;
-      let name = agentNames.get(p.id);
-      if (!name) {
-        const agent = await ctx.agents.get(p.id, companyId).catch(() => null);
-        if (agent?.name) { name = agent.name; agentNames.set(p.id, name); }
-      }
-      return name ? { ...p, name } : p;
-    }
-
-    async function enrich(rec: FeedRecord, companyId: string): Promise<FeedRecord> {
-      const out: FeedRecord = { ...rec };
-      out.from = await nameOf(rec.from, companyId);
-      out.to = await nameOf(rec.to, companyId);
-      out.actor = await nameOf(rec.actor, companyId);
-      if (rec.issueId && (!rec.title || !rec.identifier)) {
-        const issue = await ctx.issues.get(rec.issueId, companyId).catch(() => null);
-        if (issue) {
-          out.title = rec.title ?? issue.title ?? null;
-          out.identifier = rec.identifier ?? issue.identifier ?? null;
-        }
-      }
-      return out;
-    }
-
-    async function publish(companyId: string, raw: FeedRecord): Promise<FeedRecord> {
-      const rec = await enrich(raw, companyId);
-      const next = pushRecent(await load(companyId), rec, MAX_RECENT);
-      recent.set(companyId, next);
-      await ctx.state.set(stateKey(companyId), next).catch((err: unknown) => {
-        ctx.logger.warn("org-flow: salvataggio dello storico non riuscito", { error: String(err) });
-      });
-      if (openedFor !== companyId) { ctx.streams.open(CHANNEL, companyId); openedFor = companyId; }
-      ctx.streams.emit(CHANNEL, rec);
-      return rec;
-    }
-
-    const onIssue = async (ev: PluginEvent) => {
-      const rec = recordFromIssueEvent(ev);
-      if (rec) await publish(ev.companyId, rec);
-    };
-    const onRun = async (ev: PluginEvent) => {
-      const rec = recordFromRunEvent(ev);
-      if (rec) await publish(ev.companyId, rec);
-    };
-    ctx.events.on("issue.created", onIssue);
-    ctx.events.on("issue.updated", onIssue);
-    ctx.events.on("agent.run.started", onRun);
-    ctx.events.on("agent.run.finished", onRun);
-    ctx.events.on("agent.run.failed", onRun);
-
-    ctx.data.register("recent", async (params) => {
-      const companyId = typeof params?.companyId === "string" ? params.companyId : "";
-      if (!companyId) return { records: [] };
-      return { records: await load(companyId) };
+    ctx.data.register(DATA_SNAPSHOT, async (params) => {
+      const companyId = companyOf(params);
+      if (!companyId) return null;
+      return svc.getSnapshot(companyId);
     });
 
-    ctx.actions.register("ping", async (params) => {
-      const companyId = typeof params?.companyId === "string" ? params.companyId : "";
+    ctx.data.register(DATA_EVENTS, async (params) => {
+      const companyId = companyOf(params);
+      if (!companyId) return { records: [], cursor: null, snapshotAt: null };
+      const after = typeof params?.after === "string" && params.after ? params.after : null;
+      return svc.getEvents(companyId, after);
+    });
+
+    ctx.actions.register(ACTION_PING, async (params, context) => {
+      const companyId = companyOf(params, context?.companyId);
       if (!companyId) throw new Error("companyId mancante");
-      await publish(companyId, { id: randomUUID(), at: new Date().toISOString(), kind: "ping" });
-      return { ok: true };
+      return svc.ping(companyId);
     });
 
-    ctx.logger.info("org-flow: in ascolto su issue.* e agent.run.*");
+    ctx.actions.register(ACTION_REFRESH, async (params, context) => {
+      const companyId = companyOf(params, context?.companyId);
+      if (!companyId) throw new Error("companyId mancante");
+      return svc.refresh(companyId);
+    });
+
+    ctx.tools.register(
+      TOOL_REPORT_PROGRESS,
+      {
+        displayName: REPORT_PROGRESS_TOOL.displayName,
+        description: REPORT_PROGRESS_TOOL.description,
+        parametersSchema: REPORT_PROGRESS_TOOL.parametersSchema as unknown as Record<string, unknown>,
+      },
+      (params, runCtx) => svc.reportProgress(params, runCtx),
+    );
+
+    ctx.logger.info("org-flow: in ascolto su task, agenti e run");
   },
 
   async onHealth() {
-    return { status: "ok", message: "Org Flow in ascolto" };
+    if (!service) return { status: "ok", message: "Org Flow in avvio" };
+    return service.health();
+  },
+
+  async onValidateConfig(config) {
+    return validateSettings(config);
+  },
+
+  async onConfigChanged(newConfig, context) {
+    service?.onConfigChanged(newConfig ?? {}, context?.companyId ?? null);
+  },
+
+  async onShutdown() {
+    service?.shutdown();
   },
 });
 

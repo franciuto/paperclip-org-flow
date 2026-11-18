@@ -77,7 +77,7 @@ export function recordFromIssueEvent(ev: DomainEventLike): FeedRecord | null {
   return rec;
 }
 
-/** agent.run.* → record. */
+/** agent.run.* → record. Cancelled runs produce no record (they only end run tracking). */
 export function recordFromRunEvent(ev: DomainEventLike): FeedRecord | null {
   const kinds: Record<string, FeedKind> = {
     "agent.run.started": "run_started",
@@ -97,7 +97,46 @@ export function recordFromRunEvent(ev: DomainEventLike): FeedRecord | null {
   };
 }
 
+/** Person id used in the snapshot: agent UUID, or `user:<userId>` for board users. */
+export function personIdOf(p: Party | undefined): string | null {
+  if (!p) return null;
+  return p.kind === "agent" ? p.id : `user:${p.id}`;
+}
+
+/** Party for an issue assignee pair. */
+export function assigneeParty(agentId: string | null | undefined, userId: string | null | undefined): Party {
+  return party(agentId, userId);
+}
+
 /** Newest first, de-duplicated by id, capped at `max`. */
 export function pushRecent(list: FeedRecord[], rec: FeedRecord, max = 100): FeedRecord[] {
   return [rec, ...list.filter((r) => r.id !== rec.id)].slice(0, max);
+}
+
+export interface EventsPageResult { records: FeedRecord[]; cursor: string | null }
+
+const DEFAULT_PAGE = 20;
+const MAX_PAGE = 50;
+
+/**
+ * Incremental page for polling. `list` is newest first (as stored).
+ * With `after`: records with `at` > after, oldest first, at most 50 (extended to include
+ * records sharing the timestamp of the last one, so a cursor never splits equal timestamps).
+ * Without `after`: the latest 20, oldest first.
+ */
+export function pageEvents(list: FeedRecord[], after?: string | null): EventsPageResult {
+  const ascending = [...list].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  let records: FeedRecord[];
+  if (after) {
+    const newer = ascending.filter((r) => r.at > after);
+    records = newer.slice(0, MAX_PAGE);
+    if (newer.length > MAX_PAGE) {
+      const lastAt = records[records.length - 1].at;
+      for (let i = MAX_PAGE; i < newer.length && newer[i].at === lastAt; i++) records.push(newer[i]);
+    }
+  } else {
+    records = ascending.slice(-DEFAULT_PAGE);
+  }
+  const cursor = records.length > 0 ? records[records.length - 1].at : (after ?? null);
+  return { records, cursor };
 }

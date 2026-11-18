@@ -168,6 +168,23 @@ export const STREAM_CHANNEL = "org-flow";
 
 /** ctx.data.register keys */
 export const DATA_SNAPSHOT = "snapshot";        // params { companyId } → Snapshot
+/**
+ * Incremental events for polling. IMPORTANT: in Paperclip 2026.1023.0 and 2026.1106.0 the
+ * plugin stream bridge is NOT wired on the host (GET …/bridge/stream/:channel answers 501),
+ * so `usePluginStream` never connects. The UI must poll this key (every ~3 s) and use the
+ * stream only if it is actually connected.
+ * params { companyId, after?: ISO timestamp } → EventsPage
+ */
+export const DATA_EVENTS = "events";
+
+export interface EventsPage {
+  /** Records with `at` strictly greater than `after`, OLDEST first, max 50. Without `after`: the latest 20, oldest first. */
+  records: FeedRecord[];
+  /** `at` of the newest record returned (or the `after` received when nothing is new). Pass it back as `after`. */
+  cursor: string | null;
+  /** Snapshot.generatedAt of the worker's latest snapshot, so the UI knows when to refetch the snapshot. */
+  snapshotAt: string | null;
+}
 /** ctx.actions.register keys */
 export const ACTION_PING = "ping";              // params { companyId } → { ok: true }
 export const ACTION_REFRESH = "refresh";        // params { companyId } → Snapshot (forces rebuild + stream)

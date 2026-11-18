@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pushRecent, recordFromIssueEvent, recordFromRunEvent, type DomainEventLike, type FeedRecord } from "../src/worker/feed.js";
+import { pageEvents, personIdOf, pushRecent, recordFromIssueEvent, recordFromRunEvent, type DomainEventLike, type FeedRecord } from "../src/worker/feed.js";
 
 const ev = (eventType: string, payload: unknown, extra: Partial<DomainEventLike> = {}): DomainEventLike => ({
   eventId: "e1",
@@ -78,5 +78,48 @@ describe("pushRecent", () => {
     expect(list.map((r) => r.id)).toEqual(["b", "a"]);
     list = pushRecent(pushRecent(list, mk("c"), 3), mk("d"), 3);
     expect(list.map((r) => r.id)).toEqual(["d", "c", "b"]);
+  });
+});
+
+describe("pageEvents", () => {
+  const at = (n: number) => new Date(Date.UTC(2026, 10, 19, 10, 0, n)).toISOString();
+  const mk = (id: string, n: number): FeedRecord => ({ id, at: at(n), kind: "ping" });
+  // stored newest first
+  const list = Array.from({ length: 70 }, (_, i) => mk(`r${i}`, i)).reverse();
+
+  it("without cursor returns the latest 20, oldest first", () => {
+    const page = pageEvents(list);
+    expect(page.records).toHaveLength(20);
+    expect(page.records[0].id).toBe("r50");
+    expect(page.records[19].id).toBe("r69");
+    expect(page.cursor).toBe(at(69));
+  });
+
+  it("with cursor returns newer records oldest first, max 50", () => {
+    const page = pageEvents(list, at(5));
+    expect(page.records).toHaveLength(50);
+    expect(page.records[0].id).toBe("r6");
+    expect(page.cursor).toBe(at(55));
+    const next = pageEvents(list, page.cursor);
+    expect(next.records.map((r) => r.id)).toEqual(Array.from({ length: 14 }, (_, i) => `r${56 + i}`));
+  });
+
+  it("echoes the cursor when nothing is new", () => {
+    expect(pageEvents(list, at(69))).toEqual({ records: [], cursor: at(69) });
+    expect(pageEvents([], null)).toEqual({ records: [], cursor: null });
+  });
+
+  it("never splits records sharing the boundary timestamp", () => {
+    const same = Array.from({ length: 55 }, (_, i) => mk(`s${i}`, 1));
+    const page = pageEvents(same, at(0));
+    expect(page.records).toHaveLength(55);
+  });
+});
+
+describe("personIdOf", () => {
+  it("prefixes users", () => {
+    expect(personIdOf({ kind: "agent", id: "a" })).toBe("a");
+    expect(personIdOf({ kind: "user", id: "u" })).toBe("user:u");
+    expect(personIdOf(null as never)).toBeNull();
   });
 });
