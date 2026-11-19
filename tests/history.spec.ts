@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  bouncesByIssue, countBounces, entryFromRecord, holderSequences, isStatusRegression, journeyFor, personSignals, pushHistory,
+  bouncesByIssue, countBounces, entryFromRecord, isAbove, holderSequences, isStatusRegression, journeyFor, personSignals, pushHistory,
   type HistoryEntry,
 } from "../src/worker/history.js";
 import type { FeedRecord } from "../src/shared/types.js";
@@ -78,6 +78,7 @@ describe("isStatusRegression", () => {
     expect(isStatusRegression("in_progress", "todo")).toBe(false); // normal delegation pattern
     expect(isStatusRegression("in_review", "done")).toBe(false);
     expect(isStatusRegression("in_review", "cancelled")).toBe(false);
+    expect(isStatusRegression("in_review", "blocked")).toBe(false);
   });
 });
 
@@ -85,14 +86,15 @@ describe("personSignals", () => {
   it("collects received, closed, bounced and 24h stats", () => {
     const entries = [
       h({ at: ago(3000), kind: "created", toId: "A", issueId: "t1" }),
-      h({ at: ago(2000), fromId: "A", toId: "B", issueId: "t1" }),
-      h({ at: ago(30), fromId: "B", toId: "A", issueId: "t1" }), // bounce back to A
+      h({ at: ago(2000), fromId: "A", toId: "B", issueId: "t1", statusFrom: "in_progress", statusTo: "in_review" }),
+      h({ at: ago(30), fromId: "B", toId: "A", issueId: "t1" }), // reviewer hands it back down while in review
       h({ at: ago(20), kind: "status", issueId: "t2", statusFrom: "in_progress", statusTo: "done", holderId: "C", actorId: "C" }),
       h({ at: ago(10), kind: "status", issueId: "t3", statusFrom: "in_review", statusTo: "in_progress", holderId: "D" }),
       h({ at: ago(5), issueId: "t4", fromId: "E", toId: "F", statusFrom: "in_progress", statusTo: "done", actorId: "E" }),
       h({ at: ago(26 * 3600), kind: "created", toId: "A", issueId: "old" }),
     ];
-    const s = personSignals(entries, NOW);
+    // A reports to B: B handing t1 back DOWN to A (who held it before) is a "sent back".
+    const s = personSignals(entries, NOW, (id) => (id === "A" ? "B" : null));
     expect(s.get("A")!.bounced?.issueId).toBe("t1");
     expect(s.get("A")!.received?.at).toBe(ago(30));
     expect(s.get("A")!.stats).toEqual({ received24h: 2, passed24h: 1, closed24h: 0 });
@@ -116,26 +118,92 @@ describe("personSignals", () => {
   });
 });
 
-describe("bouncesByIssue", () => {
-  it("counts handoffs back to the previous holder", () => {
-    const m = bouncesByIssue([
-      h({ at: ago(500), issueId: "b", kind: "created", toId: "A" }),
-      h({ at: ago(400), issueId: "b", fromId: "A", toId: "B" }),
-      h({ at: ago(300), issueId: "b", fromId: "B", toId: "A", statusFrom: "in_review", statusTo: "in_progress" }),
-      h({ at: ago(200), issueId: "b", fromId: "A", toId: "B" }),
-    ]);
-    expect(m.get("b")).toBe(2);
+describe("bouncesByIssue / backwards work", () => {
+  // Org chart: arold > luke; giulia > martina, sofia
+  const chain: Record<string, string | null> = { luke: "arold", martina: "giulia", sofia: "giulia" };
+  const managerOf = (id: string) => chain[id] ?? null;
+
+  it("delegate down and return up is normal flow (FRA-20 / FRA-35)", () => {
+    const entries = [
+      h({ at: ago(500), issueId: "f35", kind: "created", toId: "arold" }),
+      h({ at: ago(400), issueId: "f35", fromId: "arold", toId: "luke", statusFrom: "in_progress", statusTo: "todo" }),
+      h({ at: ago(60), issueId: "f35", fromId: "luke", toId: "arold", statusFrom: "blocked", statusTo: "todo" }),
+    ];
+    expect(bouncesByIssue(entries, managerOf).get("f35")).toBeUndefined();
+    expect(personSignals(entries, NOW, managerOf).get("arold")!.bounced).toBeUndefined();
   });
+
+  it("A→B→C→A back up the chain is not a bounce (FRA-32)", () => {
+    const entries = [
+      h({ at: ago(500), issueId: "f32", kind: "created", toId: "giulia" }),
+      h({ at: ago(400), issueId: "f32", fromId: "giulia", toId: "martina" }),
+      h({ at: ago(300), issueId: "f32", fromId: "martina", toId: "sofia" }),
+      h({ at: ago(30), issueId: "f32", fromId: "sofia", toId: "giulia" }),
+    ];
+    expect(bouncesByIssue(entries, managerOf).get("f32")).toBeUndefined();
+    expect(personSignals(entries, NOW, managerOf).get("giulia")!.bounced).toBeUndefined();
+  });
+
+  it("escalating up and getting it back down (real FRA-35: Luke → Arold → Luke, blocked → todo) is normal", () => {
+    const entries = [
+      h({ at: ago(500), issueId: "e", kind: "created", toId: "luke" }),
+      h({ at: ago(400), issueId: "e", fromId: "luke", toId: "arold", statusFrom: "in_progress", statusTo: "todo" }),
+      h({ at: ago(300), issueId: "e", kind: "status", statusFrom: "in_progress", statusTo: "blocked", holderId: "arold" }),
+      h({ at: ago(60), issueId: "e", fromId: "arold", toId: "luke", statusFrom: "blocked", statusTo: "todo" }),
+    ];
+    expect(bouncesByIssue(entries, managerOf).get("e")).toBeUndefined();
+    expect(personSignals(entries, NOW, managerOf).get("luke")!.bounced).toBeUndefined();
+  });
+
+  it("parking moves are not rework (in_review → blocked/backlog, real FRA-23 / FRA-6)", () => {
+    expect(isStatusRegression("in_review", "blocked")).toBe(false);
+    expect(isStatusRegression("in_review", "backlog")).toBe(false);
+    expect(isStatusRegression("done", "in_review")).toBe(true);
+  });
+
+  it("counts rework after review, reopen, and a reviewer handing back down while in review", () => {
+    const entries = [
+      h({ at: ago(500), issueId: "b", kind: "created", toId: "luke" }),
+      h({ at: ago(400), issueId: "b", fromId: "luke", toId: "arold", statusFrom: "in_progress", statusTo: "in_review" }),
+      h({ at: ago(300), issueId: "b", fromId: "arold", toId: "luke", statusFrom: "in_review", statusTo: "in_progress" }),
+      h({ at: ago(250), issueId: "b", kind: "status", statusFrom: "in_progress", statusTo: "in_review", holderId: "luke" }),
+      h({ at: ago(200), issueId: "b", fromId: "luke", toId: "arold" }),
+      h({ at: ago(100), issueId: "b", fromId: "arold", toId: "luke" }),
+      h({ at: ago(50), issueId: "b", kind: "status", statusFrom: "done", statusTo: "todo", holderId: "luke" }),
+    ];
+    expect(bouncesByIssue(entries, managerOf).get("b")).toBe(3);
+    expect(personSignals(entries, NOW, managerOf).get("luke")!.bounced?.at).toBe(ago(50));
+  });
+
+  it("a first delegation down is not a bounce; the board sending back is", () => {
+    const entries = [
+      h({ at: ago(500), issueId: "u", kind: "created", toId: "arold" }),
+      h({ at: ago(400), issueId: "u", fromId: "arold", toId: "user:u1", statusFrom: "in_progress", statusTo: "in_review" }),
+      h({ at: ago(300), issueId: "u", fromId: "user:u1", toId: "arold" }),
+    ];
+    expect(bouncesByIssue(entries, managerOf).get("u")).toBe(1);
+  });
+
   it("does not count the return on approval (review → done back to the implementer)", () => {
     const entries = [
-      h({ at: ago(500), issueId: "r", kind: "created", toId: "dev" }),
-      h({ at: ago(400), issueId: "r", fromId: "dev", toId: "reviewer", statusFrom: "in_progress", statusTo: "in_review" }),
-      h({ at: ago(30), issueId: "r", fromId: "reviewer", toId: "dev", statusFrom: "in_review", statusTo: "done", actorId: "reviewer" }),
+      h({ at: ago(500), issueId: "r", kind: "created", toId: "luke" }),
+      h({ at: ago(400), issueId: "r", fromId: "luke", toId: "arold", statusFrom: "in_progress", statusTo: "in_review" }),
+      h({ at: ago(30), issueId: "r", fromId: "arold", toId: "luke", statusFrom: "in_review", statusTo: "done", actorId: "arold" }),
     ];
-    expect(bouncesByIssue(entries).get("r")).toBeUndefined();
-    const s = personSignals(entries, NOW);
-    expect(s.get("dev")!.bounced).toBeUndefined();
-    expect(s.get("dev")!.closed).toBeDefined();
-    expect(s.get("reviewer")!.closed).toBeDefined();
+    expect(bouncesByIssue(entries, managerOf).get("r")).toBeUndefined();
+    const s = personSignals(entries, NOW, managerOf);
+    expect(s.get("luke")!.bounced).toBeUndefined();
+    expect(s.get("luke")!.closed).toBeDefined();
+    expect(s.get("arold")!.closed).toBeDefined();
+  });
+
+  it("isAbove: chain, board above agents, cycles", () => {
+    expect(isAbove("arold", "luke", managerOf)).toBe(true);
+    expect(isAbove("luke", "arold", managerOf)).toBe(false);
+    expect(isAbove("martina", "sofia", managerOf)).toBe(false);
+    expect(isAbove("user:x", "luke", managerOf)).toBe(true);
+    expect(isAbove("luke", "user:x", managerOf)).toBe(false);
+    expect(isAbove("a", "b", (id) => (id === "a" ? "b" : "a"))).toBe(true);
+    expect(isAbove("z", "b", (id) => (id === "a" ? "b" : "a"))).toBe(false);
   });
 });

@@ -81,8 +81,8 @@ export function OrgFlowDashboardWidget({ context }: PluginWidgetProps) {
         <div className="of-wfoot">
           <span><b>{counts.working}</b> al lavoro</span>
           <span><b>{counts.sleepy}</b> dormono</span>
-          {counts.waiting ? (
-            <span className="of-w">{counts.waiting === 1 ? "1 task aspetta te" : `${counts.waiting} task aspettano te`}</span>
+          {counts.tasksWaitingForUsers ? (
+            <span className="of-w">{counts.tasksWaitingForUsers === 1 ? "1 task aspetta te" : `${counts.tasksWaitingForUsers} task aspettano te`}</span>
           ) : (
             <span>Niente che aspetta te</span>
           )}

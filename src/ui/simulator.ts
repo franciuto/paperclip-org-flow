@@ -18,7 +18,6 @@ import type {
   TaskView,
   VisualState,
 } from "../shared/types.js";
-import { formatDuration } from "./format.js";
 import { effectiveParents } from "./layout.js";
 
 export const TICK_SIM_MS = 60_000;
@@ -127,7 +126,7 @@ export function createSimulation(base: Pick<Snapshot, "people" | "settings" | "c
   if (!board) {
     board = {
       id: "user:sim-board", kind: "user", name: "Board", title: "Operatore umano", role: null, reportsTo: null,
-      paletteId: null, customAvatarUrl: null, agentStatus: null, state: "idle", stateLabel: "Nessuna richiesta",
+      paletteId: null, customAvatarUrl: null, agentStatus: null, state: "idle", stateLabel: "Nessun task",
       stateSince: null, activeTaskId: null, lastActivityAt: null, stats: { received24h: 0, passed24h: 0, closed24h: 0 },
     };
     people.unshift(board);
@@ -370,24 +369,25 @@ export function stepSimulation(s: SimState): FeedRecord[] {
 }
 
 /* ---------------- snapshot ---------------- */
+/** Visual state, with the same Italian labels as the worker (src/worker/presence.ts). */
 function visual(s: SimState, p: PersonView): { state: VisualState; label: string; active: SimTask | null } {
   const held = heldBy(s, p.id);
   if (p.kind === "user") {
-    if (!held.length) return { state: "idle", label: "Nessuna richiesta", active: null };
-    const blocked = held.filter((t) => t.status === "blocked").length;
-    return {
-      state: "waiting",
-      label: blocked ? (blocked === 1 ? "1 decisione per te" : `${blocked} decisioni per te`) : held.length === 1 ? `Da smistare: ${held[0]!.identifier}` : `${held.length} task da smistare`,
-      active: null,
-    };
+    if (!held.length) return { state: "idle", label: "Nessun task", active: null };
+    return { state: "waiting", label: held.length === 1 ? `Da gestire: ${held[0]!.identifier}` : `${held.length} task da gestire`, active: null };
   }
   const a = activeTaskOf(s, p.id);
   if (a) return { state: "working", label: `Lavora su ${a.identifier} · ${a.progress}%`, active: a };
   const rv = held.find((t) => t.status === "in_review");
-  if (rv) return { state: "thinking", label: `Rivede ${rv.identifier}`, active: rv };
-  if (held.length) return { state: "idle", label: held.length === 1 ? `Smista ${held[0]!.identifier}` : `Smista ${held.length} task`, active: null };
+  if (rv) return { state: "thinking", label: `Revisiona ${rv.identifier}`, active: rv };
+  if (held.length === 1) {
+    const t = held[0]!;
+    const label = t.status === "in_progress" ? `In corso: ${t.identifier} · ${t.progress}%` : t.status === "blocked" ? `Bloccato: ${t.identifier}` : `Da fare: ${t.identifier}`;
+    return { state: "idle", label, active: null };
+  }
+  if (held.length) return { state: "idle", label: `${held.length} task da fare`, active: null };
   const idle = s.tick - (s.emptySince[p.id] ?? 0);
-  if (idle >= SIM_SLEEP_AFTER_TICKS) return { state: "sleepy", label: `Dorme da ${formatDuration(idle * TICK_SIM_MS)}`, active: null };
+  if (idle >= SIM_SLEEP_AFTER_TICKS) return { state: "sleepy", label: "Dorme", active: null };
   return { state: "idle", label: "Libero", active: null };
 }
 
@@ -401,6 +401,7 @@ export function simulationSnapshot(s: SimState): Snapshot {
       agentStatus: p.kind === "agent" ? (v.state === "working" ? "running" : "idle") : null,
       state: v.state,
       stateLabel: v.label,
+      stateSince: v.state === "sleepy" ? simTimeIso(s, s.emptySince[p.id] ?? 0) : null,
       activeTaskId: v.active?.id ?? null,
       stats: { received24h: st.recv, passed24h: st.sent, closed24h: st.closed },
     };

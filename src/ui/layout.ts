@@ -38,6 +38,8 @@ export interface LayoutInput {
   reportsTo: string | null;
   name: string;
   chipCount: number;
+  /** Placed as a root but not linked to the users row (e.g. the "Altri" bucket). */
+  detached?: boolean;
 }
 
 export interface NodeLayout {
@@ -203,7 +205,8 @@ export function layoutOrg(people: LayoutInput[], chipW: number): OrgLayout {
   place(VROOT, PAD_X + (innerW - forestW) / 2, agentDepth0 - 1);
   {
     // Centre the users over the top-level agents (not over the whole forest), within bounds.
-    const row0 = children.get(VROOT)!.filter((r) => (wrapRow.get(r) ?? 0) === 0).map((r) => nodes[r]!.x);
+    const detachedIds = new Set(people.filter((p) => p.detached).map((p) => p.id));
+    const row0 = children.get(VROOT)!.filter((r) => (wrapRow.get(r) ?? 0) === 0 && !detachedIds.has(r)).map((r) => nodes[r]!.x);
     const centre = row0.length ? (Math.min(...row0) + Math.max(...row0)) / 2 : PAD_X + innerW / 2;
     let cursor = Math.min(Math.max(PAD_X, centre - usersW / 2), PAD_X + innerW - usersW);
     for (const u of users) {
@@ -272,7 +275,11 @@ export function layoutOrg(people: LayoutInput[], chipW: number): OrgLayout {
     edges.push({ key, d: parts.join(""), dashed });
   };
   for (const a of agents) connect(`e:${a.id}`, [nodes[a.id]!], rowsOf(a.id), false);
-  if (users.length) connect("e:users", users.map((u) => nodes[u.id]!), rowsOf(VROOT), true);
+  if (users.length) {
+    const detached = new Set(people.filter((p) => p.detached).map((p) => p.id));
+    const rows = rowsOf(VROOT).map((r) => r.filter((n) => !detached.has(n.id))).filter((r) => r.length);
+    connect("e:users", users.map((u) => nodes[u.id]!), rows, true);
+  }
 
   // Normalise: make sure nothing sits left of PAD_X (wrapped spines can stick out a little)
   const ids = people.map((p) => p.id);

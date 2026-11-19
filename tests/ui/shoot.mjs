@@ -41,6 +41,10 @@ const CAPTURES = [
   { name: "widget", q: "view=widget&fixture=busy", size: "1100,520" },
   { name: "widget-quiet-dark", q: "view=widget&fixture=quiet&dark=1", size: "1100,520" },
   { name: "simulation", q: "fixture=busy&sim=1&script=0", size: "1440,1300", budget: 12000 },
+  { name: "chips-closeup", q: "view=chips", size: "1440,560", budget: 3000 },
+  { name: "slow-replies", q: "fixture=busy&slow=5000", size: "1440,560", budget: 26000 },
+  { name: "orphan-holder", q: "fixture=busy&orphan=1&script=0", size: "1440,1300" },
+  { name: "ping", q: "fixture=quiet&ping=1", size: "1440,560", budget: 6000 },
   { name: "offline", q: "fixture=busy&eventsFail=1&script=0", size: "1440,500", budget: 12000 },
 ];
 

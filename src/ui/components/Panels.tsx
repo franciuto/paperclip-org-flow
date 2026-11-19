@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { HostNavigation } from "@paperclipai/plugin-sdk/ui";
 import { POSE_FOR_STATE, STANDALONE_GROUP_ID, type FeedRecord, type GroupView, type Party, type PersonView, type Pose, type TaskView } from "../../shared/types.js";
 import {
+  statusRegression,
   clampPercent,
   clockTime,
   firstName,
@@ -14,7 +15,7 @@ import {
   statusLabel,
   taskCode,
 } from "../format.js";
-import { isGroupDone, type LiveCounts } from "../model.js";
+import { isGroupDone, OTHERS_ID, type LiveCounts } from "../model.js";
 import { resolveParty } from "../presence.js";
 import { Avatar } from "./Avatar.js";
 import type { Selection } from "./OrgChart.js";
@@ -26,7 +27,7 @@ export function issuePath(t: { identifier: string | null; id: string }): string 
 }
 
 export function agentPath(p: PersonView): string | null {
-  return p.kind === "agent" ? `/agents/${encodeURIComponent(p.id)}` : null;
+  return p.kind === "agent" && p.id !== OTHERS_ID ? `/agents/${encodeURIComponent(p.id)}` : null;
 }
 
 function CheckIcon() {
@@ -174,18 +175,18 @@ export function KpiStrip(props: { people: PersonView[]; counts: LiveCounts; onWa
         </div>
       ))}
       {props.onWaiting ? (
-        <button type="button" className={`of-kpi of-click${counts.waiting ? " of-warn" : ""}`} onClick={props.onWaiting} aria-label={`Aspettano te: ${counts.waiting}. Mostra i dettagli`}>
-          <Avatar person={kpiFace(people, "confused", 3)} pose={counts.waiting ? "confused" : "idle"} size={34} />
+        <button type="button" className={`of-kpi of-click${counts.tasksWaitingForUsers ? " of-warn" : ""}`} onClick={props.onWaiting} aria-label={`Aspettano te: ${counts.tasksWaitingForUsers}. Mostra i dettagli`}>
+          <Avatar person={kpiFace(people, "confused", 3)} pose={counts.tasksWaitingForUsers ? "confused" : "idle"} size={34} />
           <div>
-            <div className="of-v">{counts.waiting}</div>
+            <div className="of-v">{counts.tasksWaitingForUsers}</div>
             <div className="of-l">Aspettano te</div>
           </div>
         </button>
       ) : (
-        <div className={`of-kpi${counts.waiting ? " of-warn" : ""}`}>
+        <div className={`of-kpi${counts.tasksWaitingForUsers ? " of-warn" : ""}`}>
           <Avatar person={kpiFace(people, "confused", 3)} pose="idle" size={34} />
           <div>
-            <div className="of-v">{counts.waiting}</div>
+            <div className="of-v">{counts.tasksWaitingForUsers}</div>
             <div className="of-l">Aspettano te</div>
           </div>
         </div>
@@ -378,7 +379,8 @@ function who(ctx: FeedContext, party: Party | undefined): { person: PersonView |
   return { person: undefined, name: party?.kind === "user" ? "Board" : "qualcuno" };
 }
 
-const SEND_BACK = (r: FeedRecord) => r.statusFrom === "in_review" && (r.statusTo === "in_progress" || r.statusTo === "todo");
+const SEND_BACK = (r: FeedRecord) => statusRegression(r.statusFrom, r.statusTo) !== null;
+const REOPEN = (r: FeedRecord) => statusRegression(r.statusFrom, r.statusTo) === "reopen";
 
 function FeedLine({ r, ctx }: { r: FeedRecord; ctx: FeedContext }): ReactNode {
   const A = (party: Party | undefined, pose: Pose = "idle", bold = false) => {
@@ -393,7 +395,7 @@ function FeedLine({ r, ctx }: { r: FeedRecord; ctx: FeedContext }): ReactNode {
   switch (r.kind) {
     case "handoff": {
       const toUser = r.to?.kind === "user";
-      const em = SEND_BACK(r) ? "rimandato indietro" : r.statusTo === "in_review" ? "da rivedere" : r.statusTo === "blocked" ? "serve una tua decisione" : toUser ? "per te" : "assegnato";
+      const em = REOPEN(r) ? "riaperto" : SEND_BACK(r) ? "rimandato indietro" : r.statusTo === "in_review" ? "da rivedere" : r.statusTo === "blocked" ? "serve una tua decisione" : toUser ? "per te" : "assegnato";
       const pose: Pose = SEND_BACK(r) ? "confused" : r.statusTo === "in_review" ? "thinking" : "listening";
       return (
         <div className="of-fl1">
@@ -407,6 +409,8 @@ function FeedLine({ r, ctx }: { r: FeedRecord; ctx: FeedContext }): ReactNode {
     case "status":
       if (r.statusTo === "done")
         return <div className="of-fl1">{A(r.actor, "success", true)}<span className="of-ok">ha chiuso il task</span></div>;
+      if (REOPEN(r))
+        return <div className="of-fl1">{A(r.actor, "confused", true)}<em>ha riaperto il task</em></div>;
       if (SEND_BACK(r))
         return <div className="of-fl1">{A(r.actor, "thinking", true)}<em>ha rimandato indietro</em></div>;
       return (
@@ -424,7 +428,7 @@ function FeedLine({ r, ctx }: { r: FeedRecord; ctx: FeedContext }): ReactNode {
     case "run_finished":
       return <div className="of-fl1">{A(r.actor, "idle", true)}<em>ha finito il run</em></div>;
     case "run_failed":
-      return <div className="of-fl1">{A(r.actor, "confused", true)}<span className="of-bad">run non riuscito</span></div>;
+      return <div className="of-fl1">{A(r.actor, "confused", true)}<span className="of-bad">run fallito</span></div>;
     case "progress":
       return (
         <div className="of-fl1">
@@ -453,7 +457,7 @@ export function ActivityFeed(props: {
     return <p className="of-feed-empty">Ancora nessuna attività registrata. Appena un task cambia mano o stato, o un agente parte, compare qui.</p>;
   }
   return (
-    <ol className="of-feed" aria-live="polite" aria-relevant="additions">
+    <ol className="of-feed" aria-label="Eventi recenti, dal più nuovo">
       {records.map((r) => {
         const tid = props.taskIdOf(r);
         const on = !!tid && tid === props.selectedTaskId;

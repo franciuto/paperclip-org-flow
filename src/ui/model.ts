@@ -3,14 +3,18 @@
  * connection health. Kept out of the components so it can be unit-tested.
  */
 import { STANDALONE_GROUP_ID, type FeedRecord, type GroupView, type PersonView, type TaskView } from "../shared/types.js";
-import { isClosedStatus, naturalCompare } from "./format.js";
+import { formatDuration, isClosedStatus, naturalCompare } from "./format.js";
 
 export function isGroupDone(g: GroupView): boolean {
   if (g.status && isClosedStatus(g.status)) return true;
   return g.childrenTotal > 0 && g.childrenDone >= g.childrenTotal;
 }
 
-/** Open groups first (by identifier), then completed ones, the standalone bucket last. */
+/**
+ * Open groups first (by identifier), then completed ones, the standalone bucket last.
+ * The worker already sorts groups, but by `updatedAt`: cards would jump around on every update.
+ * Re-sorting by identifier keeps each parent card in a stable place on the strip.
+ */
 export function sortGroups(groups: GroupView[]): GroupView[] {
   const rank = (g: GroupView) => (g.id === STANDALONE_GROUP_ID ? 2 : isGroupDone(g) ? 1 : 0);
   return [...groups].sort(
@@ -49,7 +53,11 @@ export interface LiveCounts {
   working: number;
   thinking: number;
   sleepy: number;
-  waiting: number; // open tasks held by human users
+  /**
+   * "Aspettano te": OPEN TASKS held by human users. Not the worker's `Snapshot.counts.waiting`
+   * (which counts people), hence the different name.
+   */
+  tasksWaitingForUsers: number;
   open: number;
 }
 
@@ -61,7 +69,7 @@ export function liveCounts(people: PersonView[], tasks: TaskView[]): LiveCounts 
     working: agents.filter((p) => p.state === "working").length,
     thinking: agents.filter((p) => p.state === "thinking").length,
     sleepy: agents.filter((p) => p.state === "sleepy").length,
-    waiting: open.filter((t) => t.holderId && users.has(t.holderId)).length,
+    tasksWaitingForUsers: open.filter((t) => t.holderId && users.has(t.holderId)).length,
     open: open.length,
   };
 }
@@ -128,4 +136,52 @@ export function mergeFeed(...lists: FeedRecord[][]): FeedRecord[] {
     }
   }
   return out.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 100);
+}
+
+/** Synthetic node collecting tasks whose holder is not in `people` (e.g. an agent filtered out). */
+export const OTHERS_ID = "__of_others";
+
+/**
+ * Re-assigns open tasks held by unknown people to the "Altri" bucket and returns the bucket
+ * person (null when not needed), so no open task is ever invisible.
+ */
+export function bucketUnknownHolders(tasks: TaskView[], people: PersonView[]): { tasks: TaskView[]; others: PersonView | null } {
+  const known = new Set(people.map((p) => p.id));
+  let n = 0;
+  const out = tasks.map((t) => {
+    if (!t.holderId || known.has(t.holderId) || !isOpenTask(t)) return t;
+    n++;
+    return { ...t, holderId: OTHERS_ID };
+  });
+  if (!n) return { tasks, others: null };
+  const others: PersonView = {
+    id: OTHERS_ID,
+    kind: "agent",
+    name: "Altri",
+    title: "Assegnatari fuori dall'organigramma",
+    role: null,
+    reportsTo: null,
+    paletteId: null,
+    customAvatarUrl: null,
+    agentStatus: null,
+    state: "idle",
+    stateLabel: n === 1 ? "1 task" : `${n} task`,
+    stateSince: null,
+    activeTaskId: null,
+    lastActivityAt: null,
+    stats: { received24h: 0, passed24h: 0, closed24h: 0 },
+  };
+  return { tasks: out, others };
+}
+
+/**
+ * Label shown under a person. The worker says just "Dorme"; the UI adds how long, from
+ * `stateSince`, so the quiet state reads as alive ("Dorme da 2 h").
+ */
+export function displayLabel(p: Pick<PersonView, "state" | "stateLabel" | "stateSince">, nowMs: number): string {
+  if (p.state === "sleepy" && p.stateLabel === "Dorme" && p.stateSince) {
+    const ms = nowMs - Date.parse(p.stateSince);
+    if (Number.isFinite(ms) && ms >= 60_000) return `Dorme da ${formatDuration(ms)}`;
+  }
+  return p.stateLabel;
 }

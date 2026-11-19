@@ -58,6 +58,8 @@ const CHECKLIST_TTL_MS = 10 * 60_000;
 const DERIVE_TTL_MS = 20_000;
 const MAX_PARALLEL = 6;
 const REPORTED_MAX_AGE_MS = 30 * 24 * 3_600_000;
+/** After a failed state read, the load is retried lazily, at most this often. */
+const LOAD_RETRY_MS = 10_000;
 
 const STATE_FEED = "feed";
 const STATE_FEED_LEGACY = "recent-feed";
@@ -76,8 +78,13 @@ interface ParentEntry { at: number; parent: IssueLite | null; children: Children
 
 interface CompanyRuntime {
   id: string;
+  /** True only after the stored feed/history were read successfully; nothing is persisted before. */
   loaded: boolean;
   loading: Promise<void> | null;
+  loadFailedAt: number;
+  /** Per-company publish sequence (polling cursor) and the sequence of each record in the feed. */
+  seq: number;
+  seqOf: Map<string, number>;
   feed: FeedRecord[];
   history: HistoryEntry[];
   reported: Record<string, ReportedProgress>;
@@ -116,6 +123,12 @@ const str = (v: unknown): string | null => (typeof v === "string" && v.length > 
 const asDict = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
 const errMsg = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
+/** Mirrors the host's issue list visibility: hidden issues and chat conversations are not tasks. */
+function isListedIssue(row: unknown): boolean {
+  const r = asDict(row);
+  return !r.hiddenAt && !r.conversationAgentId;
+}
+
 /** Runs `fn` over `items` with bounded concurrency. */
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
@@ -134,6 +147,8 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
   const debounceMs = opts.debounceMs ?? SNAPSHOT_DEBOUNCE_MS;
   const now = opts.now ?? (() => Date.now());
   const companies = new Map<string, CompanyRuntime>();
+  /** Identifies this worker run in polling cursors (sequences restart with the worker). */
+  const epoch = String(Date.now());
   let openedStreamFor: string | null = null;
   let lastEventAt: string | null = null;
   let lastBuildError: { at: number; message: string } | null = null;
@@ -148,7 +163,8 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     let c = companies.get(companyId);
     if (!c) {
       c = {
-        id: companyId, loaded: false, loading: null, feed: [], history: [], reported: {},
+        id: companyId, loaded: false, loading: null, loadFailedAt: 0, seq: 0, seqOf: new Map(),
+        feed: [], history: [], reported: {},
         agents: null, settings: null, openIssues: null, closedIssues: null, patched: new Map(),
         parents: new Map(), checklists: new Map(), baseDirty: true, building: null, base: null,
         runs: { active: {}, last: {} }, lastKnown: {}, snapshot: null, fingerprint: null, derivedAt: 0, timer: null,
@@ -162,37 +178,55 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
 
   /* ---------------- persistence ---------------- */
 
+  /**
+   * Reads the stored feed/history/progress once. When a read fails the company stays
+   * "not loaded": events keep flowing in memory, nothing is persisted (it would overwrite
+   * the stored history with a near-empty one) and the load is retried lazily.
+   */
   async function ensureLoaded(c: CompanyRuntime): Promise<void> {
     if (c.loaded) return;
     if (!c.loading) {
+      if (c.loadFailedAt && now() - c.loadFailedAt < LOAD_RETRY_MS) return;
       c.loading = (async () => {
+        let failed = false;
         const read = async (key: string) => {
           try { return await ctx.state.get(companyKey(c.id, key)); } catch (err) {
-            warn("org-flow: lettura dello stato non riuscita", { companyId: c.id, key, error: errMsg(err) });
+            failed = true;
+            warn("org-flow: lettura dello stato non riuscita, riprovo più tardi", { companyId: c.id, key, error: errMsg(err) });
             return null;
           }
         };
         const [feed, history, reported] = await Promise.all([read(STATE_FEED), read(STATE_HISTORY), read(STATE_REPORTED)]);
         let feedList = Array.isArray(feed) ? (feed as FeedRecord[]) : [];
-        if (feedList.length === 0) {
+        if (!failed && feedList.length === 0) {
           const legacy = await read(STATE_FEED_LEGACY);
           if (Array.isArray(legacy)) feedList = legacy as FeedRecord[];
         }
-        // Merge with anything recorded while loading.
-        for (const r of [...feedList].reverse()) if (!c.feed.some((x) => x.id === r.id)) c.feed.push(r);
-        c.feed = [...c.feed].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)).slice(0, FEED_MAX);
+        if (failed) { c.loadFailedAt = now(); return; }
+        const hadMemory = c.feed.length > 0 || c.history.length > 0;
+        // Stored records are older than anything published in memory: number them first.
+        const stored = feedList.filter((r) => r && typeof r.id === "string" && !c.seqOf.has(r.id))
+          .sort((x, y) => (x.at < y.at ? -1 : x.at > y.at ? 1 : 0));
+        for (const r of stored) c.seqOf.set(r.id, ++c.seq);
+        const memIds = new Set(c.feed.map((r) => r.id));
+        c.feed = [...c.feed, ...stored.reverse().filter((r) => !memIds.has(r.id))].slice(0, FEED_MAX);
         if (Array.isArray(history)) {
           const known = new Set(c.history.map((h) => h.id));
           c.history = [...c.history, ...(history as HistoryEntry[]).filter((h) => !known.has(h.id))].slice(0, HISTORY_MAX);
         }
         if (reported && typeof reported === "object") c.reported = { ...(reported as Record<string, ReportedProgress>), ...c.reported };
         c.loaded = true;
+        c.loadFailedAt = 0;
+        if (hadMemory) {
+          await Promise.all([persist(c, STATE_FEED, c.feed), persist(c, STATE_HISTORY, c.history), persist(c, STATE_REPORTED, c.reported)]);
+        }
       })().finally(() => { c.loading = null; });
     }
     await c.loading;
   }
 
   async function persist(c: CompanyRuntime, key: string, value: unknown) {
+    if (!c.loaded) return;
     try { await ctx.state.set(companyKey(c.id, key), value); } catch (err) {
       warn("org-flow: salvataggio dello stato non riuscito", { companyId: c.id, key, error: errMsg(err) });
     }
@@ -230,7 +264,13 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     const lists = await Promise.all(statuses.map((status) =>
       ctx.issues.list({ companyId, status: status as never })));
     const out: IssueLite[] = [];
-    for (const rows of lists) for (const row of rows) { const i = toIssueLite(row); if (i) out.push(i); }
+    for (const rows of lists) {
+      for (const row of rows) {
+        if (!isListedIssue(row)) continue;
+        const i = toIssueLite(row);
+        if (i) out.push(i);
+      }
+    }
     return out;
   }
 
@@ -240,10 +280,15 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     let entry: ParentEntry;
     try {
       const tree = await ctx.issues.getSubtree(parentId, c.id, { includeRoot: true });
-      const rows = (tree?.issues ?? []).map(toIssueLite).filter((i): i is IssueLite => !!i);
-      const parent = rows.find((i) => i.id === parentId) ?? null;
+      const raw = (tree?.issues ?? []) as unknown[];
+      // getSubtree reads the table directly: hidden (and chat) issues come back too and must not count.
+      const visible = raw.filter(isListedIssue);
+      const parent = toIssueLite(raw.find((r) => asDict(r).id === parentId)) ?? null;
       const childStatuses: Record<string, string> = {};
-      for (const i of rows) if (i.parentId === parentId) childStatuses[i.id] = i.status;
+      for (const r of visible) {
+        const i = toIssueLite(r);
+        if (i && i.parentId === parentId) childStatuses[i.id] = i.status;
+      }
       entry = { at: now(), parent, children: countChildren(Object.values(childStatuses)), childStatuses };
     } catch (err) {
       // Deleted or unreadable parent: the children become standalone.
@@ -293,26 +338,38 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       const listed = byId.get(id);
       if (listed ? p.updatedAt >= listed.updatedAt : (!refreshClosed && isClosedStatus(p.status))) byId.set(id, p);
     }
-    const closed = [...byId.values()].filter((i) => isClosedStatus(i.status));
+    const horizon = Math.max(settings.keepClosedHours, 24) * 3_600_000;
+    const withinHorizon = (i: IssueLite) => {
+      if (!isClosedStatus(i.status)) return true;
+      const ct = i.closedAt ? Date.parse(i.closedAt) : NaN;
+      return Number.isFinite(ct) && t - ct <= horizon;
+    };
+    // Only closed issues inside the horizon are kept in memory.
+    const closed = [...byId.values()].filter((i) => isClosedStatus(i.status) && withinHorizon(i));
     for (const i of open) byId.set(i.id, i);
     c.openIssues = { at: listedAt, list: open };
     c.closedIssues = { at: refreshClosed ? listedAt : c.closedIssues!.at, list: closed };
     for (const [id, p] of patchedAtStart) if (c.patched.get(id) === p) c.patched.delete(id);
 
-    const horizon = Math.max(settings.keepClosedHours, 24) * 3_600_000;
-    const issues = [...byId.values()].filter((i) => {
-      if (!isClosedStatus(i.status)) return true;
-      const ct = i.closedAt ? Date.parse(i.closedAt) : NaN;
-      return Number.isFinite(ct) && t - ct <= horizon;
-    });
+    const issues = [...byId.values()].filter(withinHorizon);
 
+    // Parents of visible issues, plus every open issue: an open parent whose children all
+    // closed long ago still needs its children (progress and group).
     const parentIds = [...new Set(issues.map((i) => i.parentId).filter((p): p is string => !!p))];
-    const parentEntries = await mapLimit(parentIds, MAX_PARALLEL, (pid) => getParent(c, pid));
+    const parentSet = new Set(parentIds);
+    const openCandidates = issues.filter((i) => !isClosedStatus(i.status) && !parentSet.has(i.id)).map((i) => i.id);
+    const lookups = [...parentIds, ...openCandidates];
+    const entries = await mapLimit(lookups, MAX_PARALLEL, (pid) => getParent(c, pid));
     const parents: Record<string, IssueLite | null> = {};
     const children: Record<string, ChildrenCount> = {};
-    parentIds.forEach((pid, idx) => {
-      const e = parentEntries[idx];
-      parents[pid] = e.parent;
+    lookups.forEach((pid, idx) => {
+      const e = entries[idx];
+      if (!parentSet.has(pid)) {
+        if (Object.keys(e.childStatuses).length === 0) return; // not a parent
+        if (e.parent) parents[pid] = e.parent;
+      } else {
+        parents[pid] = e.parent;
+      }
       // Overlay statuses we know are fresher (from this build's lists).
       const statuses = { ...e.childStatuses };
       for (const i of issues) if (i.parentId === pid) statuses[i.id] = i.status;
@@ -477,9 +534,15 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
   }
 
   /** Stores the record (feed + history), streams it. Never throws. */
-  async function publish(c: CompanyRuntime, rec: FeedRecord, holderBefore: string | null) {
+  /** `holder`: current assignee, used as holder of status-only changes. */
+  async function publish(c: CompanyRuntime, rec: FeedRecord, holder: string | null) {
     c.feed = pushRecent(c.feed, rec, FEED_MAX);
-    const entry = entryFromRecord(rec, holderBefore);
+    c.seqOf.set(rec.id, ++c.seq);
+    if (c.seqOf.size > FEED_MAX * 2) {
+      const ids = new Set(c.feed.map((r) => r.id));
+      for (const id of [...c.seqOf.keys()]) if (!ids.has(id)) c.seqOf.delete(id);
+    }
+    const entry = entryFromRecord(rec, holder);
     if (entry) c.history = pushHistory(c.history, entry);
     lastEventAt = rec.at;
     emitStream(c.id, { type: "event", record: rec });
@@ -495,7 +558,6 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     if (!relevant && !rec) return;
 
     const known = issueId ? findIssue(c, issueId) : null;
-    const holderBefore = known ? holderOf(known) : null;
     let fresh: IssueLite | null = null;
     if (issueId) {
       fresh = await fetchIssue(c, issueId);
@@ -515,8 +577,13 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       }
       if (known?.parentId) c.parents.delete(known.parentId);
       if (fresh?.parentId) c.parents.delete(fresh.parentId);
+      c.parents.delete(issueId);
     }
     c.baseDirty = true;
+    // Status-only changes do not name the assignee: take it from the issue as fetched now
+    // (the cached copy may be missing after a restart, or stale with concurrent events).
+    const holder = fresh ? holderOf(fresh) : known ? holderOf(known) : null;
+    if (issueId && rec) await maybeResetReported(c, issueId, rec, fresh);
 
     if (rec) {
       try {
@@ -533,9 +600,35 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       } catch (err) {
         warn("org-flow: arricchimento dell'evento non riuscito", { eventId: ev.eventId, error: errMsg(err) });
       }
-      await publish(c, rec, holderBefore);
+      await publish(c, rec, holder);
     }
     scheduleSnapshot(c);
+  }
+
+  /**
+   * Reported progress is reset when the task is reopened (closed → open) or when it moves to
+   * someone other than the agent who reported it (the new holder has not confirmed that
+   * estimate). It is kept when the task is handed to the reporter itself, and on status-only
+   * changes.
+   */
+  async function maybeResetReported(c: CompanyRuntime, issueId: string, rec: FeedRecord, fresh: IssueLite | null) {
+    const r = c.reported[issueId];
+    if (!r) return;
+    const reopened = isClosedStatus(rec.statusFrom) && !!rec.statusTo && !isClosedStatus(rec.statusTo);
+    let reassigned = false;
+    if (rec.kind === "handoff") {
+      const newHolder = fresh ? holderOf(fresh) : rec.to ? (rec.to.kind === "agent" ? rec.to.id : `user:${rec.to.id}`) : null;
+      reassigned = newHolder !== (r.agentId ?? null);
+    }
+    if (!reopened && !reassigned) return;
+    const { [issueId]: _drop, ...rest } = c.reported;
+    c.reported = rest;
+    await persist(c, STATE_REPORTED, c.reported);
+    if (c.loaded) {
+      try { await ctx.state.delete({ scopeKind: "issue", scopeId: issueId, stateKey: STATE_PROGRESS }); } catch (err) {
+        warn("org-flow: azzeramento dell'avanzamento non riuscito", { issueId, error: errMsg(err) });
+      }
+    }
   }
 
   function setAgentStatus(c: CompanyRuntime, agentId: string, status: string) {
@@ -549,6 +642,9 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     const agentId = str(p.agentId) ?? (ev.actorType === "agent" ? str(ev.actorId) : null);
     const issueId = str(p.issueId);
     const at = ev.occurredAt;
+    // Runs move issues without an activity event (checkout → in_progress, auto-unblock):
+    // refresh the issue lists with the debounced snapshot.
+    c.baseDirty = true;
     if (agentId) {
       if (ev.eventType === "agent.run.started") {
         c.runs.active[agentId] = { runId: str(p.runId), issueId, startedAt: str(p.startedAt) ?? at };
@@ -631,7 +727,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     await ensureLoaded(c);
     const pending = deriveIfOld(c);
     if (pending) { try { await pending; } catch { /* keep the previous snapshot version */ } }
-    const page = pageEvents(c.feed, after ?? null);
+    const page = pageEvents(c.feed.map((record) => ({ seq: c.seqOf.get(record.id) ?? 0, record })), after ?? null, epoch);
     return { records: page.records, cursor: page.cursor, snapshotAt: c.snapshot?.generatedAt ?? null };
   }
 
@@ -647,10 +743,11 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
   async function refresh(companyId: string): Promise<Snapshot> {
     const c = rt(companyId);
     await ensureLoaded(c);
-    c.agents = null;
-    c.settings = null;
-    c.closedIssues = null;
-    c.parents.clear();
+    // Expire (not clear) the caches: on a failed read the previous values are kept.
+    if (c.agents) c.agents.at = 0;
+    if (c.settings) c.settings.at = 0;
+    for (const e of c.parents.values()) e.at = 0;
+    // Closed issues keep their own 5-minute refresh (they are patched from events).
     await ensureBase(c, true);
     const snap = (await derive(c)) as Snapshot;
     if (snap) emitStream(c.id, { type: "snapshot", snapshot: snap });

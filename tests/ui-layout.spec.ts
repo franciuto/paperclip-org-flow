@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chipWidthFor, placeChips, CHIP_H, CHIP_GAP } from "../src/ui/chips.js";
+import { chipCodeRoom, chipWidthFor, placeChips, CHIP_CODE_X, CHIP_FONT, CHIP_GAP, CHIP_H, CHIP_PAD_R, CHIP_TEXT_GAP, MAX_CHIP_W } from "../src/ui/chips.js";
 import { CHIPS_TOP, effectiveParents, layoutOrg, MIN_NODE_W, NODE_ENTRY, NODE_TOP, type LayoutInput, type OrgLayout } from "../src/ui/layout.js";
 import { busySnapshot, IDS } from "./ui/fixtures.js";
 
@@ -67,6 +67,14 @@ describe("layoutOrg", () => {
     // drops to both roots
     expect(users.d).toContain(`V${Math.round((l.nodes.a!.y + NODE_ENTRY) * 10) / 10}`);
     assertNoOverlap(l);
+  });
+
+  it("does not link detached roots (the 'Altri' bucket) to the users row", () => {
+    const l = layoutOrg([user("u1"), agent("a", null), { ...agent("x", null, 1), detached: true }], 80);
+    const e = l.edges.find((x) => x.key === "e:users")!;
+    expect(e.d).toContain(`M${Math.round(l.nodes.a!.x * 10) / 10} `);
+    expect(e.d).not.toContain(`M${Math.round(l.nodes.x!.x * 10) / 10} `);
+    expect(l.nodes.x!.depth).toBe(1);
   });
 
   it("treats agents with a missing manager as roots and survives reporting cycles", () => {
@@ -153,8 +161,27 @@ describe("placeChips", () => {
     expect(placeChips(0, 80)).toEqual({ slots: [], more: null, width: 0, height: 0 });
   });
 
-  it("chip width grows with the identifier length", () => {
+  it("chip width grows with the identifier length and is capped", () => {
     expect(chipWidthFor(["FRA-1"])).toBeLessThan(chipWidthFor(["PROJECT-12345"]));
-    expect(chipWidthFor(["X".repeat(80)])).toBeLessThanOrEqual(132);
+    expect(chipWidthFor(["X".repeat(80)])).toBeLessThanOrEqual(MAX_CHIP_W);
+  });
+
+  it("code and '100%' never overlap with real monospace advances (0.60–0.62 em, bold percent)", () => {
+    for (const em of [0.6, 0.61, 0.62]) {
+      for (const code of ["FRA-56", "FRA-1234", "PROJ-12345", "SIM-7"]) {
+        const w = chipWidthFor([code]);
+        const codeEnd = CHIP_CODE_X + code.length * CHIP_FONT * em;
+        const pctStart = w - CHIP_PAD_R - 4 * CHIP_FONT * em * 1.04;
+        expect(pctStart - codeEnd, `${code} @${em}em`).toBeGreaterThanOrEqual(CHIP_TEXT_GAP - 0.5);
+        expect(chipCodeRoom(w)).toBeGreaterThanOrEqual(code.length * CHIP_FONT * em - 0.5);
+      }
+    }
+  });
+
+  it("squeezes codes longer than the capped chip into the room left by the percent", () => {
+    const w = chipWidthFor(["A-VERY-LONG-IDENTIFIER-12345"]);
+    expect(w).toBe(MAX_CHIP_W);
+    expect(chipCodeRoom(w)).toBeLessThan("A-VERY-LONG-IDENTIFIER-12345".length * CHIP_FONT * 0.6);
+    expect(CHIP_CODE_X + chipCodeRoom(w) + CHIP_TEXT_GAP).toBeLessThan(w - CHIP_PAD_R - 4 * CHIP_FONT * 0.6);
   });
 });

@@ -158,13 +158,13 @@ describe("deriveSnapshot", () => {
 
   it("presence: idle agent without activity becomes sleepy; journeys and bounces from history", () => {
     const base = baseModel({
-      agents: [agent("a"), agent("b")],
+      agents: [agent("a", { reportsTo: "b" }), agent("b")],
       issues: [issue("t", { status: "todo", assigneeAgentId: "a" })],
     });
     const history = [
       { id: "1", at: ago(900), kind: "created" as const, issueId: "t", fromId: null, toId: "a", statusFrom: null, statusTo: "todo", actorId: null, holderId: "a" },
-      { id: "2", at: ago(800), kind: "handoff" as const, issueId: "t", fromId: "a", toId: "b", statusFrom: null, statusTo: null, actorId: "a", holderId: "b" },
-      { id: "3", at: ago(700), kind: "handoff" as const, issueId: "t", fromId: "b", toId: "a", statusFrom: null, statusTo: null, actorId: "b", holderId: "a" },
+      { id: "2", at: ago(800), kind: "handoff" as const, issueId: "t", fromId: "a", toId: "b", statusFrom: "in_progress", statusTo: "in_review", actorId: "a", holderId: "b" },
+      { id: "3", at: ago(700), kind: "handoff" as const, issueId: "t", fromId: "b", toId: "a", statusFrom: "in_review", statusTo: "todo", actorId: "b", holderId: "a" },
     ];
     const s = deriveSnapshot(input(base, { history }));
     const t = s.tasks[0];
@@ -174,6 +174,21 @@ describe("deriveSnapshot", () => {
     const later = deriveSnapshot(input(base, { history, now: NOW + 20 * 60_000 }));
     expect(later.people.find((p) => p.id === "b")!.state).toBe("sleepy");
     expect(later.counts.sleepy).toBe(1);
+  });
+
+  it("returning up the chain is not a bounce and does not confuse the manager", () => {
+    const base = baseModel({
+      agents: [agent("boss"), agent("dev", { reportsTo: "boss" })],
+      issues: [issue("t", { status: "todo", assigneeAgentId: "boss" })],
+    });
+    const history = [
+      { id: "1", at: ago(900), kind: "created" as const, issueId: "t", fromId: null, toId: "boss", statusFrom: null, statusTo: "todo", actorId: null, holderId: "boss" },
+      { id: "2", at: ago(800), kind: "handoff" as const, issueId: "t", fromId: "boss", toId: "dev", statusFrom: null, statusTo: null, actorId: "boss", holderId: "dev" },
+      { id: "3", at: ago(30), kind: "handoff" as const, issueId: "t", fromId: "dev", toId: "boss", statusFrom: "blocked", statusTo: "todo", actorId: "dev", holderId: "boss" },
+    ];
+    const s = deriveSnapshot(input(base, { history }));
+    expect(s.tasks[0].bounces).toBe(0);
+    expect(s.people.find((p) => p.id === "boss")).toMatchObject({ state: "listening" });
   });
 
   it("feed in the snapshot is newest first, max 100", () => {

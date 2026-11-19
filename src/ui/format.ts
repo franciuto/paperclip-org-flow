@@ -23,6 +23,20 @@ export function isClosedStatus(status: string | null | undefined): boolean {
   return status === "done" || status === "cancelled";
 }
 
+/**
+ * Same rule as the worker's isStatusRegression (src/worker/history.ts), so "Rimandato" means the
+ * same thing everywhere: review → rework (todo/in_progress) or a closed task reopened
+ * (done → todo/in_progress/in_review). Parking moves (backlog, blocked) and cancellations are not.
+ * (The worker also counts a task in review handed back DOWN the chain to a previous holder; that
+ * needs history, so the UI relies on the worker's snapshot state/`bounces` for it.)
+ */
+export function statusRegression(from: string | null | undefined, to: string | null | undefined): "rework" | "reopen" | null {
+  if (!from || !to) return null;
+  if (from === "in_review") return to === "todo" || to === "in_progress" ? "rework" : null;
+  if (from === "done") return to === "todo" || to === "in_progress" || to === "in_review" ? "reopen" : null;
+  return null;
+}
+
 /** CSS custom property holding the colour of a status (defined in styles.ts). */
 export function statusColorVar(status: string | null | undefined): string {
   switch (status) {

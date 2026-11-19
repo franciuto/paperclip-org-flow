@@ -1,8 +1,10 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { POSE_FOR_STATE, type PersonView, type TaskView } from "../../shared/types.js";
-import { CHIP_H } from "../chips.js";
+import { CHIP_CODE_X, CHIP_H, CHIP_PAD_R, chipCodeRoom, chipCodeWidth } from "../chips.js";
 import { clampPercent, poseUrl, statusLabel, taskCode, tint, truncateToWidth } from "../format.js";
 import { CHIPS_TOP, LABEL_FONT, type OrgLayout } from "../layout.js";
+import { OTHERS_ID } from "../model.js";
+import { rovingNext } from "../poll.js";
 import { FLIGHT_MS, type Flight } from "../presence.js";
 
 export type Selection = { type: "task" | "person"; id: string };
@@ -77,9 +79,12 @@ interface ChipProps {
   selected: boolean;
   dim: boolean;
   onSelect: (s: Selection) => void;
+  /** Roving tabindex: 0 only for the chart's current focus item. */
+  tabIndex?: number;
+  onFocusItem?: () => void;
 }
 
-function Chip({ task, x, y, w, color, groupTitle, selected, dim, onSelect }: ChipProps) {
+export function Chip({ task, x, y, w, color, groupTitle, selected, dim, onSelect, tabIndex = 0, onFocusItem }: ChipProps) {
   const pct = clampPercent(task.progress);
   const code = taskCode(task);
   const label = `${code} · ${task.title} — ${statusLabel(task.status)}, ${pct}%${groupTitle ? ` · ${groupTitle}` : ""}`;
@@ -88,7 +93,9 @@ function Chip({ task, x, y, w, color, groupTitle, selected, dim, onSelect }: Chi
     <g
       className={`of-chip${selected ? " of-csel" : ""}${dim ? " of-cdim" : ""}`}
       transform={`translate(${x} ${y})`}
-      tabIndex={0}
+      tabIndex={tabIndex}
+      data-fkey={`t:${task.id}`}
+      onFocus={onFocusItem}
       role="button"
       aria-label={label}
       aria-pressed={selected}
@@ -105,8 +112,9 @@ function Chip({ task, x, y, w, color, groupTitle, selected, dim, onSelect }: Chi
         <g transform={`translate(9 ${CHIP_H / 2})`}>
           <StatusGlyph status={task.status} />
         </g>
-        <text x={17.5} y={12.6}>{code}</text>
-        <text className="of-pc" x={w - 4.5} y={12.6} textAnchor="end">{pct}%</text>
+        {/* Codes longer than the room are squeezed (textLength) so they never touch the percent. */}
+        <text x={CHIP_CODE_X} y={12.6} {...(chipCodeWidth(code) > chipCodeRoom(w) ? { textLength: chipCodeRoom(w), lengthAdjust: "spacingAndGlyphs" } : {})}>{code}</text>
+        <text className="of-pc" x={w - CHIP_PAD_R} y={12.6} textAnchor="end">{pct}%</text>
       </g>
     </g>
   );
@@ -195,6 +203,27 @@ const MAX_SCALE = 1.12;
 export function OrgChart(props: OrgChartProps) {
   const { people, held, layout, chipW, selected, focusGroup, touched, touchColor, flights, onSelect } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  // Roving tabindex: the chart is ONE tab stop; arrow keys / Home / End move between people and
+  // their chips in reading order (person, then its chips, then the next person).
+  const focusKeys: string[] = [];
+  for (const id of layout.ids) {
+    focusKeys.push(`p:${id}`);
+    const n = layout.nodes[id];
+    for (const t of (held.get(id) ?? []).slice(0, n?.chips.slots.length ?? 0)) focusKeys.push(`t:${t.id}`);
+  }
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const current = activeKey && focusKeys.includes(activeKey) ? activeKey : focusKeys[0] ?? null;
+  const tabFor = (key: string) => (key === current ? 0 : -1);
+  const onChartKey = (ev: KeyboardEvent) => {
+    const from = (ev.target as Element | null)?.closest?.("[data-fkey]")?.getAttribute("data-fkey") ?? current;
+    const next = rovingNext(focusKeys, from, ev.key);
+    if (!next) return;
+    ev.preventDefault();
+    setActiveKey(next);
+    const el = svgRef.current?.querySelector(`[data-fkey="${next.replace(/"/g, '\\"')}"]`) as (SVGElement & { focus(): void }) | null;
+    el?.focus();
+  };
   const [avail, setAvail] = useState<number>(0);
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
 
@@ -236,7 +265,7 @@ export function OrgChart(props: OrgChartProps) {
 
   return (
     <div className="of-scroll" ref={scrollRef}>
-      <svg className="of-org" width={W} height={H} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label={props.ariaLabel}>
+      <svg ref={svgRef} className="of-org" width={W} height={H} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label={`${props.ariaLabel}. Usa le frecce per spostarti tra persone e task, Invio per i dettagli.`} onKeyDown={onChartKey}>
         <g aria-hidden="true">
           {layout.edges.map((e) => (
             <path key={e.key} d={e.d} className={`of-edge${e.dashed ? " of-dashed" : ""}`} />
@@ -262,7 +291,9 @@ export function OrgChart(props: OrgChartProps) {
                 <g
                   className={`of-node${isSel ? " of-sel" : ""}${isTouched ? " of-touched" : ""}`}
                   data-state={p.state}
-                  tabIndex={0}
+                  tabIndex={tabFor(`p:${id}`)}
+                  data-fkey={`p:${id}`}
+                  onFocus={() => setActiveKey(`p:${id}`)}
                   role="button"
                   aria-label={nodeLabel}
                   aria-pressed={isSel}
@@ -294,7 +325,7 @@ export function OrgChart(props: OrgChartProps) {
                     ) : (
                       <>
                         <circle className="of-user-av" cx={0} cy={-12} r={25} />
-                        <text className="of-nm" textAnchor="middle" y={-7}>{p.name.slice(0, 2).toUpperCase()}</text>
+                        <text className="of-nm" textAnchor="middle" y={-7}>{p.id === OTHERS_ID ? "···" : p.name.slice(0, 2).toUpperCase()}</text>
                       </>
                     )}
                   </g>
@@ -325,6 +356,8 @@ export function OrgChart(props: OrgChartProps) {
                           selected={selected?.type === "task" && selected.id === t.id}
                           dim={!!focusGroup && t.groupId !== focusGroup}
                           onSelect={onSelect}
+                          tabIndex={tabFor(`t:${t.id}`)}
+                          onFocusItem={() => setActiveKey(`t:${t.id}`)}
                         />
                       );
                     })}

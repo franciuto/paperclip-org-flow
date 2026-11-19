@@ -168,7 +168,7 @@ describe("org-flow worker", () => {
     await vi.advanceTimersByTimeAsync(700);
     const first = await ctx.harness.getData<EventsPage>(DATA_EVENTS, { companyId: CO });
     expect(first.records.map((r) => r.id)).toEqual(["e0", "e1", "e2"]);
-    expect(first.cursor).toBe(first.records[2].at);
+    expect(first.cursor).toMatch(/^seq:[^:]+:3$/);
     const snap = snapshots(ctx.emitted).at(-1)!;
     expect(first.snapshotAt).toBe(snap.generatedAt);
 
@@ -183,6 +183,16 @@ describe("org-flow worker", () => {
     const s1 = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
     const s2 = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
     expect(s2.generatedAt).toBe(s1.generatedAt);
+  });
+
+  it("polling never skips a record published after the cursor with an older timestamp", async () => {
+    await ctx.harness.emit("agent.run.started", { agentId: "ag-laura", runId: "n" }, { companyId: CO, eventId: "newer", occurredAt: iso(1_000) });
+    const page = await ctx.harness.getData<EventsPage>(DATA_EVENTS, { companyId: CO });
+    expect(page.records.map((r) => r.id)).toEqual(["newer"]);
+    // Published later (slow enrichment) but stamped earlier than "newer".
+    await ctx.harness.emit("agent.run.finished", { agentId: "ag-sofia", runId: "o" }, { companyId: CO, eventId: "older", occurredAt: iso(5_000) });
+    const next = await ctx.harness.getData<EventsPage>(DATA_EVENTS, { companyId: CO, after: page.cursor });
+    expect(next.records.map((r) => r.id)).toEqual(["older"]);
   });
 
   it("ping pushes a record and a snapshot through the same path", async () => {
@@ -208,6 +218,11 @@ describe("org-flow worker", () => {
     await plugin.definition.setup(again.harness.ctx);
     const page = await again.harness.getData<EventsPage>(DATA_EVENTS, { companyId: CO });
     expect(page.records.map((r) => r.id)).toEqual(["ev-p"]);
+    // A UI left open across the restart sends the old worker's cursor: treated as no cursor.
+    const oldCursor = (await ctx.harness.getData<EventsPage>(DATA_EVENTS, { companyId: CO })).cursor!;
+    expect(oldCursor).toMatch(/^seq:\d+:\d+$/);
+    const resumed = await again.harness.getData<EventsPage>(DATA_EVENTS, { companyId: CO, after: oldCursor.replace(/^seq:\d+:/, "seq:1:") });
+    expect(resumed.records.map((r) => r.id)).toEqual(["ev-p"]);
   });
 
   it("keeps companies apart on the stream", async () => {
@@ -284,6 +299,86 @@ describe("org-flow worker", () => {
     });
   });
 
+  describe("review fixes", () => {
+    const H = 3_600_000;
+
+    it("an open parent whose children closed long ago keeps its group and children progress; hidden children do not count", async () => {
+      ctx.harness.seed({
+        issues: [
+          issue("fra-6", { status: "in_progress", assigneeAgentId: "ag-laura" }),
+          issue("c-old1", { parentId: "fra-6", status: "done", completedAt: iso(48 * H) }),
+          issue("c-old2", { parentId: "fra-6", status: "todo", hiddenAt: iso(48 * H) }),
+          issue("c-old3", { parentId: "fra-6", status: "cancelled", cancelledAt: iso(48 * H) }),
+        ] as never,
+      });
+      const s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
+      expect(s.tasks.map((t) => t.id)).not.toContain("c-old1");
+      expect(s.tasks.find((t) => t.id === "fra-6")).toMatchObject({ groupId: "fra-6", progressSource: "children", progress: 100 });
+      expect(s.groups.find((g) => g.id === "fra-6")).toMatchObject({ childrenTotal: 1, childrenDone: 1 });
+    });
+
+    it("run events refresh issue statuses with the debounced snapshot (no activity event for checkout)", async () => {
+      await ctx.harness.getData(DATA_SNAPSHOT, { companyId: CO });
+      ctx.harness.seed({ issues: [issue("orphan", { status: "in_progress", parentId: "deleted-parent", assigneeAgentId: "ag-sofia", updatedAt: iso() })] as never });
+      await ctx.harness.emit("agent.run.started", { agentId: "ag-sofia", runId: "r", issueId: "orphan" }, { companyId: CO, eventId: "rs" });
+      await vi.advanceTimersByTimeAsync(700);
+      expect(snapshots(ctx.emitted).at(-1)!.tasks.find((t) => t.id === "orphan")!.status).toBe("in_progress");
+    });
+
+    it("refresh keeps the previous agents when agents.list fails", async () => {
+      await ctx.harness.getData(DATA_SNAPSHOT, { companyId: CO });
+      ctx.harness.ctx.agents.list = async () => { throw new Error("down"); };
+      const s = await ctx.harness.performAction<Snapshot>(ACTION_REFRESH, { companyId: CO }, { companyId: CO });
+      expect(s.people.filter((p) => p.kind === "agent").map((p) => p.id).sort()).toEqual(["ag-giulia", "ag-laura", "ag-sofia"]);
+    });
+
+    it("refresh does not re-read closed issues (5-minute cadence)", async () => {
+      const calls: string[] = [];
+      const list = ctx.harness.ctx.issues.list.bind(ctx.harness.ctx.issues);
+      ctx.harness.ctx.issues.list = async (input) => { calls.push(String(input.status)); return list(input); };
+      await ctx.harness.getData(DATA_SNAPSHOT, { companyId: CO });
+      await ctx.harness.performAction(ACTION_REFRESH, { companyId: CO }, { companyId: CO });
+      await ctx.harness.performAction(ACTION_REFRESH, { companyId: CO }, { companyId: CO });
+      expect(calls.filter((c) => c === "done")).toHaveLength(1);
+      expect(calls.filter((c) => c === "todo")).toHaveLength(3);
+    });
+
+    it("status-only changes use the holder of the freshly fetched issue (cold worker)", async () => {
+      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "done", assigneeAgentId: "ag-giulia", completedAt: iso(), updatedAt: iso() })] as never });
+      await ctx.harness.emit("issue.updated", { changes: { status: { from: "in_progress", to: "done" } } },
+        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "st", occurredAt: iso() });
+      const history = ctx.harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "history" }) as Array<{ holderId: string }>;
+      expect(history[0].holderId).toBe("ag-giulia");
+      await vi.advanceTimersByTimeAsync(700);
+      expect(snapshots(ctx.emitted).at(-1)!.people.find((p) => p.id === "ag-giulia")).toMatchObject({ state: "success", stateLabel: "Ha chiuso FRA-34" });
+    });
+
+    it("reported progress is reset when the task moves to someone else, kept on status changes", async () => {
+      await ctx.harness.executeTool(TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 70 }, { agentId: "ag-giulia", companyId: CO });
+      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "in_progress", assigneeAgentId: "ag-giulia", updatedAt: iso() })] as never });
+      await ctx.harness.emit("issue.updated", { changes: { status: { from: "todo", to: "in_progress" } } },
+        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "k1", occurredAt: iso() });
+      let s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
+      expect(s.tasks.find((t) => t.id === "fra-34")!.progressSource).toBe("reported");
+
+      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "todo", assigneeAgentId: "ag-sofia", updatedAt: iso() })] as never });
+      await ctx.harness.emit("issue.updated", { changes: { assigneeAgentId: { from: "ag-giulia", to: "ag-sofia" } } },
+        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "k2", occurredAt: iso() });
+      s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
+      expect(s.tasks.find((t) => t.id === "fra-34")).toMatchObject({ progressSource: "status", progress: 5 });
+      expect(ctx.harness.getState({ scopeKind: "issue", scopeId: "fra-34", stateKey: "progress" })).toBeUndefined();
+    });
+
+    it("reported progress is reset when a closed task is reopened", async () => {
+      await ctx.harness.executeTool(TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 90 }, { agentId: "ag-giulia", companyId: CO });
+      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "todo", assigneeAgentId: "ag-giulia", updatedAt: iso() })] as never });
+      await ctx.harness.emit("issue.updated", { changes: { status: { from: "done", to: "todo" } } },
+        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "re", occurredAt: iso() });
+      const s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
+      expect(s.tasks.find((t) => t.id === "fra-34")!.progressSource).toBe("status");
+    });
+  });
+
   it("health reports ok", async () => {
     const h = await plugin.definition.onHealth!();
     expect(h.status).toBe("ok");
@@ -314,5 +409,36 @@ describe("org-flow worker — settings and plan checklist", () => {
   it("validates config through onValidateConfig", async () => {
     expect(await plugin.definition.onValidateConfig!({ sleepAfterMinutes: 10 })).toMatchObject({ ok: true });
     expect(await plugin.definition.onValidateConfig!({ sleepAfterMinutes: -3 })).toMatchObject({ ok: false });
+  });
+});
+
+describe("org-flow worker — failed state load", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("does not overwrite stored history after a failed read, and retries the load later", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const { harness } = setup();
+    harness.seed({ agents: [agent("ag-a", "Anna")] as never, issues: [issue("t1", { assigneeAgentId: "ag-a" })] as never });
+    const storedFeed = [{ id: "old-1", at: iso(60_000), kind: "ping" }];
+    const storedHistory = [{ id: "h-old", at: iso(60_000), kind: "created", issueId: "t1", fromId: null, toId: "ag-a", statusFrom: null, statusTo: "todo", actorId: null, holderId: "ag-a" }];
+    await harness.ctx.state.set({ scopeKind: "company", scopeId: CO, stateKey: "feed" }, storedFeed);
+    await harness.ctx.state.set({ scopeKind: "company", scopeId: CO, stateKey: "history" }, storedHistory);
+    const realGet = harness.ctx.state.get.bind(harness.ctx.state);
+    harness.ctx.state.get = async () => { throw new Error("db down"); };
+    await plugin.definition.setup(harness.ctx);
+
+    await harness.emit("issue.updated", { changes: { assigneeAgentId: { from: null, to: "ag-a" } } },
+      { companyId: CO, entityId: "t1", entityType: "issue", eventId: "new-1", occurredAt: iso() });
+    expect(harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "history" })).toEqual(storedHistory);
+    expect(harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "feed" })).toEqual(storedFeed);
+
+    harness.ctx.state.get = realGet;
+    vi.setSystemTime(Date.now() + 11_000);
+    const page = await harness.getData<EventsPage>(DATA_EVENTS, { companyId: CO });
+    expect(page.records.map((r) => r.id).sort()).toEqual(["new-1", "old-1"]);
+    const feed = harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "feed" }) as FeedRecord[];
+    expect(feed.map((r) => r.id).sort()).toEqual(["new-1", "old-1"]);
+    const history = harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "history" }) as Array<{ id: string }>;
+    expect(history.map((h) => h.id).sort()).toEqual(["h-old", "new-1"]);
   });
 });

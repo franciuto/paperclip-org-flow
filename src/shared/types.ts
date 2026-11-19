@@ -49,7 +49,7 @@ export interface FeedRecord {
 
 /** Visual state of a person. Agents map 1:1 to Paperclip character poses (see POSE_FOR_STATE). */
 export type VisualState =
-  | "working"    // run in progress, or holds an in_progress task with recent activity
+  | "working"    // a heartbeat run is in progress (agent status running, or run_started without an end)
   | "thinking"   // holds an in_review task (is reviewing)
   | "listening"  // just received a task (handoff in the last ~60 s)
   | "success"    // just closed / got approved (last ~90 s)
@@ -114,7 +114,12 @@ export interface TaskView {
   progressSource: ProgressSource;
   progressNote: string | null;
   updatedAt: string;
-  /** Times the task went back and forth between the same two people (A→B→A counts 1). */
+  /**
+   * Times the work went backwards: rework after review (in_review → todo/in_progress), a reopen
+   * (done → todo/in_progress/in_review), or a task in review handed back DOWN the chain to
+   * someone who already held it. Delegating down, returning up (for review, help, when blocked
+   * or done) and handing back after an escalation are normal flow and do not count.
+   */
   bounces: number;
   /** Holders over time, oldest first (from the plugin's own history; may be partial for old tasks). */
   journey: JourneyStep[];
@@ -173,14 +178,14 @@ export const DATA_SNAPSHOT = "snapshot";        // params { companyId } → Snap
  * plugin stream bridge is NOT wired on the host (GET …/bridge/stream/:channel answers 501),
  * so `usePluginStream` never connects. The UI must poll this key (every ~3 s) and use the
  * stream only if it is actually connected.
- * params { companyId, after?: ISO timestamp } → EventsPage
+ * params { companyId, after?: cursor from the previous page (an ISO timestamp is still accepted) } → EventsPage
  */
 export const DATA_EVENTS = "events";
 
 export interface EventsPage {
-  /** Records with `at` strictly greater than `after`, OLDEST first, max 50. Without `after`: the latest 20, oldest first. */
+  /** Records published after the cursor, OLDEST first, max 50. Without `after`: the latest 20, oldest first. May repeat records already seen (after a worker restart or with an ISO cursor): de-duplicate by id. */
   records: FeedRecord[];
-  /** `at` of the newest record returned (or the `after` received when nothing is new). Pass it back as `after`. */
+  /** Opaque cursor (`seq:<worker run>:<n>`, publish order). Pass it back as `after`. */
   cursor: string | null;
   /** Snapshot.generatedAt of the worker's latest snapshot, so the UI knows when to refetch the snapshot. */
   snapshotAt: string | null;

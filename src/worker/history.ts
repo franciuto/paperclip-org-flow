@@ -57,15 +57,16 @@ export function oldestFirst(list: HistoryEntry[]): HistoryEntry[] {
   return [...list].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
 }
 
-const STATUS_RANK: Record<string, number> = { backlog: 0, todo: 1, in_progress: 2, blocked: 2, in_review: 3, done: 4 };
-
-/** in_review/done went back to an earlier stage (rework requested). */
+/**
+ * The work went back to an earlier working stage: review → rework (todo/in_progress) or a
+ * closed task reopened (done → todo/in_progress/in_review). Parking moves (backlog, blocked)
+ * and cancellations are not rework.
+ */
 export function isStatusRegression(from: string | null, to: string | null): boolean {
-  if (!from || !to || to === "cancelled") return false;
-  if (from !== "in_review" && from !== "done") return false;
-  const rf = STATUS_RANK[from];
-  const rt = STATUS_RANK[to];
-  return rf !== undefined && rt !== undefined && rt < rf;
+  if (!from || !to) return false;
+  if (from === "in_review") return to === "todo" || to === "in_progress";
+  if (from === "done") return to === "todo" || to === "in_progress" || to === "in_review";
+  return false;
 }
 
 /** Who closed the task: the previous holder on a handoff+done, the holder otherwise. */
@@ -107,25 +108,69 @@ export function journeyFor(
   return steps;
 }
 
+/** Manager of a person (agents: reportsTo), or null. */
+export type ManagerOf = (personId: string) => string | null;
+
+export const noChain: ManagerOf = () => null;
+
 /**
- * Bounces per issue from history: a handoff back to the holder before the current one
- * (A→B→A counts 1). Returns on approval (status → done) do not count.
+ * True when `upper` is above `lower` in the org chart. Board users are above every agent.
  */
-export function bouncesByIssue(entries: HistoryEntry[]): Map<string, number> {
-  const seqs = new Map<string, string[]>();
-  const out = new Map<string, number>();
-  for (const e of oldestFirst(entries)) {
-    if (e.kind === "status" || !e.toId) continue;
-    let seq = seqs.get(e.issueId);
-    if (!seq) { seq = []; seqs.set(e.issueId, seq); }
-    if (e.kind === "handoff" && seq.length === 0 && e.fromId) seq.push(e.fromId);
-    const last = seq[seq.length - 1];
-    if (last === e.toId) continue;
-    if (e.kind === "handoff" && seq.length >= 2 && seq[seq.length - 2] === e.toId && e.statusTo !== "done") {
-      out.set(e.issueId, (out.get(e.issueId) ?? 0) + 1);
-    }
-    seq.push(e.toId);
+export function isAbove(upper: string, lower: string, managerOf: ManagerOf): boolean {
+  if (upper === lower) return false;
+  const upperIsUser = upper.startsWith("user:");
+  if (lower.startsWith("user:")) return false;
+  if (upperIsUser) return true;
+  const seen = new Set<string>();
+  let cur = managerOf(lower);
+  while (cur && !seen.has(cur)) {
+    if (cur === upper) return true;
+    seen.add(cur);
+    cur = managerOf(cur);
   }
+  return false;
+}
+
+/**
+ * Events that send the work backwards, keyed by entry id → person who gets it back:
+ * - the status regresses (see isStatusRegression: rework after review, or reopen);
+ * - while in review, the task is handed back DOWN the chain to someone who already held it
+ *   (a reviewer returning it without changing the status).
+ * Delegating down and returning up (for review, for help, when blocked or done) is normal
+ * flow, and so is handing a task back down after an escalation (e.g. blocked → todo) or the
+ * return on approval (status → done).
+ */
+export function backwardsTargets(entries: HistoryEntry[], managerOf: ManagerOf = noChain): Map<string, string> {
+  const out = new Map<string, string>();
+  const holders = new Map<string, Set<string>>();
+  const statusOf = new Map<string, string>();
+  for (const e of oldestFirst(entries)) {
+    let held = holders.get(e.issueId);
+    if (!held) { held = new Set(); holders.set(e.issueId, held); }
+    const statusBefore = e.statusFrom ?? statusOf.get(e.issueId) ?? null;
+    const statusAfter = e.statusTo ?? statusBefore;
+    if (isStatusRegression(e.statusFrom, e.statusTo)) {
+      const target = e.kind === "status" ? e.holderId : e.toId;
+      if (target) out.set(e.id, target);
+    } else if (
+      e.kind === "handoff" && e.fromId && e.toId && statusBefore === "in_review" && statusAfter === "in_review"
+      && held.has(e.toId) && isAbove(e.fromId, e.toId, managerOf)
+    ) {
+      out.set(e.id, e.toId);
+    }
+    if (statusAfter) statusOf.set(e.issueId, statusAfter);
+    if (e.fromId) held.add(e.fromId);
+    if (e.toId) held.add(e.toId);
+    if (e.holderId) held.add(e.holderId);
+  }
+  return out;
+}
+
+/** Bounces per issue: number of events that sent the work backwards (see backwardsTargets). */
+export function bouncesByIssue(entries: HistoryEntry[], managerOf: ManagerOf = noChain): Map<string, number> {
+  const back = backwardsTargets(entries, managerOf);
+  const out = new Map<string, number>();
+  for (const e of entries) if (back.has(e.id)) out.set(e.issueId, (out.get(e.issueId) ?? 0) + 1);
   return out;
 }
 
@@ -158,7 +203,8 @@ function later(a: Signal | undefined, b: Signal): Signal {
  * Walks the history once and returns, per person: the latest "received", "closed" and
  * "sent back" signals, last activity and 24 h stats.
  */
-export function personSignals(entries: HistoryEntry[], now: number): Map<string, PersonSignals> {
+export function personSignals(entries: HistoryEntry[], now: number, managerOf: ManagerOf = noChain): Map<string, PersonSignals> {
+  const back = backwardsTargets(entries, managerOf);
   const out = new Map<string, PersonSignals>();
   const get = (id: string): PersonSignals => {
     let s = out.get(id);
@@ -170,7 +216,6 @@ export function personSignals(entries: HistoryEntry[], now: number): Map<string,
     const s = get(id);
     if (!s.lastActivityAt || at > s.lastActivityAt) s.lastActivityAt = at;
   };
-  const priorHolders = new Map<string, Set<string>>();
   for (const e of oldestFirst(entries)) {
     const t = Date.parse(e.at);
     const recent = Number.isFinite(t) && now - t <= DAY_MS;
@@ -180,25 +225,15 @@ export function personSignals(entries: HistoryEntry[], now: number): Map<string,
     touch(e.actorId, e.at);
     if (e.kind === "status") touch(e.holderId, e.at);
 
-    let holders = priorHolders.get(e.issueId);
-    if (!holders) { holders = new Set(); priorHolders.set(e.issueId, holders); }
-
     if ((e.kind === "created" || e.kind === "handoff") && e.toId) {
       const s = get(e.toId);
       s.received = later(s.received, sig);
       if (recent) s.stats.received24h += 1;
-      // Sent back to someone who already held it (A→B→A). A task returned on approval
-      // (Paperclip's returnAssignee, status → done) is not a bounce.
-      if (e.kind === "handoff" && holders.has(e.toId) && e.fromId !== e.toId && e.statusTo !== "done") {
-        s.bounced = later(s.bounced, sig);
-      }
     }
     if (e.kind === "handoff" && e.fromId && recent) get(e.fromId).stats.passed24h += 1;
 
-    if (isStatusRegression(e.statusFrom, e.statusTo)) {
-      const target = e.kind === "status" ? e.holderId : e.toId;
-      if (target) { const s = get(target); s.bounced = later(s.bounced, sig); }
-    }
+    const backTo = back.get(e.id);
+    if (backTo) { const s = get(backTo); s.bounced = later(s.bounced, sig); }
 
     if (e.statusTo === "done" && e.statusFrom !== "done") {
       const closer = closerOf(e);
@@ -215,9 +250,6 @@ export function personSignals(entries: HistoryEntry[], now: number): Map<string,
         s.closed = later(s.closed, sig);
       }
     }
-
-    if (e.fromId) holders.add(e.fromId);
-    if (e.toId) holders.add(e.toId);
   }
   return out;
 }

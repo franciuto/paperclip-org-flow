@@ -2,7 +2,6 @@
  * Chip placement under a person: 2 per row, at most 4 slots. With more than 4 tasks the
  * 4th slot becomes a "+n altri" label. Pure; coordinates are relative to the node centre.
  */
-import { estimateMonoWidth } from "./format.js";
 
 export const CHIP_H = 18;
 export const CHIP_GAP = 4;
@@ -21,12 +20,30 @@ export interface ChipPlacement {
   height: number;
 }
 
-/** Chip width sized from the longest code shown (glyph + code + percent). */
+/** Chip geometry (px, at scale 1): glyph area, gap between code and percent, right padding. */
+export const CHIP_CODE_X = 17.5;
+export const CHIP_TEXT_GAP = 6;
+export const CHIP_PAD_R = 5;
+export const MAX_CHIP_W = 140;
+/** Conservative monospace advance (em): DejaVu/Liberation Mono ≈ .60, SF Mono ≈ .61; bold may be a bit wider. */
+const MONO_EM = 0.62;
+
+export function chipCodeWidth(code: string): number {
+  return code.length * CHIP_FONT * MONO_EM;
+}
+export function chipPercentWidth(): number {
+  return "100%".length * CHIP_FONT * MONO_EM * 1.04; // the percent is bold
+}
+
+/** Chip width sized from the longest code shown (glyph + code + gap + "100%" + padding). */
 export function chipWidthFor(codes: string[]): number {
-  const longest = codes.reduce((m, c) => Math.max(m, estimateMonoWidth(c, CHIP_FONT)), estimateMonoWidth("FRA-00", CHIP_FONT));
-  const pct = estimateMonoWidth("100%", CHIP_FONT);
-  // 17px glyph area + code + 6px gap + percent + 5px right padding
-  return Math.ceil(Math.min(132, 17 + longest + 6 + pct + 5));
+  const longest = codes.reduce((m, c) => Math.max(m, chipCodeWidth(c)), chipCodeWidth("FRA-00"));
+  return Math.ceil(Math.min(MAX_CHIP_W, CHIP_CODE_X + longest + CHIP_TEXT_GAP + chipPercentWidth() + CHIP_PAD_R));
+}
+
+/** Room left for the code inside a chip of width `w` (the renderer squeezes longer codes into it). */
+export function chipCodeRoom(w: number): number {
+  return Math.max(10, w - CHIP_CODE_X - CHIP_TEXT_GAP - chipPercentWidth() - CHIP_PAD_R);
 }
 
 export function placeChips(count: number, chipW: number, chipH = CHIP_H, gap = CHIP_GAP): ChipPlacement {

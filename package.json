@@ -1,9 +1,9 @@
 {
   "name": "paperclip-plugin-org-flow",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
-  "description": "Org Flow: attività live dei task e degli agenti in Paperclip (versione minima)",
+  "description": "Org Flow: l'organigramma di Paperclip in diretta, con chi lavora su cosa, i task raggruppati per padre e i passaggi di mano animati",
   "scripts": {
     "build": "node ./esbuild.config.mjs",
     "dev": "node ./esbuild.config.mjs --watch",
@@ -22,7 +22,7 @@
     "ui"
   ],
   "author": "franciuto",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "devDependencies": {
     "@paperclipai/plugin-sdk": "2026.1023.0",
     "@types/node": "^24.0.0",

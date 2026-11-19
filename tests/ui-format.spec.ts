@@ -11,10 +11,11 @@ import {
   poseUrl,
   relativeTime,
   statusLabel,
+  statusRegression,
   taskCode,
   truncateToWidth,
 } from "../src/ui/format.js";
-import { activeGroups, connectionState, heldByPerson, liveCounts, mergeFeed, recentlyClosed, sortGroups, touchedBy } from "../src/ui/model.js";
+import { activeGroups, connectionState, displayLabel, heldByPerson, liveCounts, mergeFeed, recentlyClosed, sortGroups, touchedBy } from "../src/ui/model.js";
 import { busySnapshot, IDS, quietSnapshot } from "./ui/fixtures.js";
 
 const NOW = Date.parse("2026-11-19T15:00:00Z");
@@ -87,7 +88,7 @@ describe("model", () => {
   });
 
   it("counts working/reviewing/sleeping agents and tasks waiting for the board", () => {
-    expect(liveCounts(s.people, s.tasks)).toEqual({ working: 4, thinking: 1, sleepy: 2, waiting: 1, open: 13 });
+    expect(liveCounts(s.people, s.tasks)).toEqual({ working: 4, thinking: 1, sleepy: 2, tasksWaitingForUsers: 1, open: 13 });
   });
 
   it("touchedBy includes everyone on the journey", () => {
@@ -100,6 +101,24 @@ describe("model", () => {
     const q = quietSnapshot(NOW);
     expect(activeGroups(q.groups)).toHaveLength(0);
     expect(recentlyClosed(q.tasks).map((t) => t.identifier)).toEqual(["FRA-41", "FRA-42", "FRA-43", "FRA-44", "FRA-45"]);
+  });
+
+  it("adds the sleep duration to the worker's plain 'Dorme' label", () => {
+    const since = new Date(NOW - 125 * 60_000).toISOString();
+    expect(displayLabel({ state: "sleepy", stateLabel: "Dorme", stateSince: since }, NOW)).toBe("Dorme da 2 h 5 min");
+    expect(displayLabel({ state: "sleepy", stateLabel: "Dorme", stateSince: new Date(NOW - 5000).toISOString() }, NOW)).toBe("Dorme");
+    expect(displayLabel({ state: "sleepy", stateLabel: "Dorme", stateSince: null }, NOW)).toBe("Dorme");
+    expect(displayLabel({ state: "working", stateLabel: "Lavora su FRA-1 · 40%", stateSince: since }, NOW)).toBe("Lavora su FRA-1 · 40%");
+  });
+
+  it("statusRegression mirrors the worker's rule", () => {
+    expect(statusRegression("in_review", "in_progress")).toBe("rework");
+    expect(statusRegression("in_review", "todo")).toBe("rework");
+    expect(statusRegression("done", "in_review")).toBe("reopen");
+    expect(statusRegression("done", "todo")).toBe("reopen");
+    for (const [a, b] of [["in_review", "backlog"], ["in_review", "blocked"], ["in_review", "done"], ["in_progress", "todo"], ["done", "cancelled"], ["blocked", "todo"], [null, "todo"]] as const) {
+      expect(statusRegression(a, b), `${a} → ${b}`).toBeNull();
+    }
   });
 
   it("merges feeds without duplicates, newest first", () => {

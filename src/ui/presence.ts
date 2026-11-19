@@ -2,12 +2,15 @@
  * Live "presence" handling (pure). When a feed record arrives the UI reacts immediately,
  * without waiting for the next snapshot:
  * - flashes: short-lived visual state overrides on people (received → listening,
- *   done → success, sent back / failed → confused, run started → working);
+ *   done → success, sent back / failed → confused, run started → working); labels use the same
+ *   Italian wording as the worker (src/worker/presence.ts) so a flash and the following snapshot
+ *   say the same thing;
  * - task overrides: the task jumps to its new holder / status / percent until a snapshot
  *   generated after the event replaces it;
  * - flights: a handoff between two people on the chart makes the chip fly.
  */
 import type { FeedRecord, Party, PersonView, TaskView, VisualState } from "../shared/types.js";
+import { statusRegression } from "./format.js";
 
 export const FLASH_MS = 4200;
 export const SUCCESS_FLASH_MS = 5200;
@@ -68,8 +71,7 @@ export function findTask(rec: Pick<FeedRecord, "issueId" | "identifier">, tasks:
   return null;
 }
 
-const isSendBack = (from?: string | null, to?: string | null) =>
-  from === "in_review" && (to === "in_progress" || to === "todo" || to === "backlog");
+const isSendBack = (from?: string | null, to?: string | null) => statusRegression(from, to) !== null;
 
 /** What a single record should do to the view right now. `flightMs` delays the receiver's flash. */
 export function effectsOfRecord(
@@ -95,15 +97,17 @@ export function effectsOfRecord(
       const fromId = resolveParty(rec.from, people);
       const toId = resolveParty(rec.to, people);
       if (task) {
-        out.override = { taskId: task.id, holderId: rec.to === undefined ? undefined : toId, at: rec.at, expires };
+        // rec.to null = unassigned; a party we can't resolve keeps the previous holder (no override).
+        const holderId = rec.to === undefined ? undefined : rec.to === null ? null : toId ?? undefined;
+        out.override = { taskId: task.id, holderId, at: rec.at, expires };
         if (rec.statusTo) out.override.status = rec.statusTo;
       }
       const flies = !!(task && fromId && toId && fromId !== toId);
       if (flies) out.flight = { taskId: task!.id, fromId: fromId!, toId: toId! };
       const delay = flies ? flightMs : 0;
-      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `Ti aspetta ${code}`, delay);
-      else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(toId, "confused", `Rimandato indietro ${code}`, delay);
-      else if (rec.statusTo === "in_review") flash(toId, "listening", `Da rivedere: ${code}`, delay);
+      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `Da gestire: ${code}`, delay);
+      else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(toId, "confused", `Rimandato: ${code}`, delay);
+      else if (rec.statusTo === "in_review") flash(toId, "listening", `Revisiona ${code}`, delay);
       else flash(toId, "listening", `Ha ricevuto ${code}`, delay);
       break;
     }
@@ -114,18 +118,18 @@ export function effectsOfRecord(
       }
       const holder = task?.holderId ?? resolveParty(rec.actor, people);
       if (rec.statusTo === "done") {
-        flash(holder, "success", `Fatto! ${code}`, 0, SUCCESS_FLASH_MS);
+        flash(holder, "success", `Ha chiuso ${code}`, 0, SUCCESS_FLASH_MS);
         const actor = resolveParty(rec.actor, people);
-        if (actor && actor !== holder) flash(actor, "success", `Ha approvato ${code}`, 0, SUCCESS_FLASH_MS);
-      } else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(holder, "confused", `Rimandato indietro ${code}`);
-      else if (rec.statusTo === "blocked") flash(holder, "confused", `Bloccato su ${code}`);
-      else if (rec.statusTo === "in_review") flash(holder, "thinking", `Rivede ${code}`);
+        if (actor && actor !== holder) flash(actor, "success", `Ha chiuso ${code}`, 0, SUCCESS_FLASH_MS);
+      } else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(holder, "confused", `Rimandato: ${code}`);
+      else if (rec.statusTo === "blocked") flash(holder, "confused", `Bloccato: ${code}`);
+      else if (rec.statusTo === "in_review") flash(holder, "thinking", `Revisiona ${code}`);
       break;
     }
     case "created": {
       const toId = resolveParty(rec.to, people);
-      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `Nuovo task: ${code}`);
-      else flash(toId, "listening", `Nuovo task: ${code}`);
+      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `Da gestire: ${code}`);
+      else flash(toId, "listening", `Ha ricevuto ${code}`);
       break;
     }
     case "run_started": {
@@ -138,7 +142,7 @@ export function effectsOfRecord(
       flash(resolveParty(rec.actor, people), null, "", 0, 0);
       break;
     case "run_failed":
-      flash(resolveParty(rec.actor, people), "confused", "Run non riuscito");
+      flash(resolveParty(rec.actor, people), "confused", `Run fallito${task || rec.identifier ? ` · ${code}` : ""}`);
       break;
     case "progress": {
       if (task && rec.percent != null) {
@@ -226,11 +230,15 @@ export function describeRecord(rec: FeedRecord, nameOf: (p: Party | undefined) =
   const actor = nameOf(rec.actor);
   switch (rec.kind) {
     case "handoff":
+      if (statusRegression(rec.statusFrom, rec.statusTo) === "reopen") return `${from} ha riaperto il task e l'ha passato a ${to}`;
       if (isSendBack(rec.statusFrom, rec.statusTo)) return `${from} ha rimandato indietro il task a ${to}`;
       if (rec.statusTo === "in_review") return `${from} ha passato il task a ${to} da rivedere`;
       if (rec.statusTo === "blocked") return `${from} chiede una decisione a ${to}`;
       return `${from} ha passato il task a ${to}`;
     case "status":
+      if (rec.statusTo === "done") return `${actor} ha chiuso il task`;
+      if (statusRegression(rec.statusFrom, rec.statusTo) === "reopen") return `${actor} ha riaperto il task`;
+      if (isSendBack(rec.statusFrom, rec.statusTo)) return `${actor} ha rimandato indietro il task`;
       return `Stato cambiato da ${actor}`;
     case "created":
       return rec.to ? `Nuovo task assegnato a ${to}` : "Nuovo task";
@@ -239,7 +247,7 @@ export function describeRecord(rec: FeedRecord, nameOf: (p: Party | undefined) =
     case "run_finished":
       return `${actor} ha finito il run`;
     case "run_failed":
-      return `Run di ${actor} non riuscito`;
+      return `Run di ${actor} fallito`;
     case "progress":
       return `${actor} è al ${rec.percent ?? 0}%`;
     case "ping":

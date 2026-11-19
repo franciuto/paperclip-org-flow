@@ -184,17 +184,17 @@ export function busySnapshot(now = Date.now()): Snapshot {
     childrenTotal: 1, childrenDone: 0, holderIds: [IDS.daniel], updatedAt: iso(now - 28 * MIN),
   });
   const people: PersonView[] = [
-    person("board", "waiting", "Ti aspetta FRA-59", now),
-    person("laura", "thinking", "Rivede FRA-57", now, { stats: { received24h: 9, passed24h: 8, closed24h: 2 } }),
-    person("giulia", "idle", "Smista FRA-64", now, { stats: { received24h: 4, passed24h: 3, closed24h: 0 } }),
+    person("board", "waiting", "Da gestire: FRA-59", now),
+    person("laura", "thinking", "Revisiona FRA-57", now, { stats: { received24h: 9, passed24h: 8, closed24h: 2 } }),
+    person("giulia", "idle", "Da fare: FRA-64", now, { stats: { received24h: 4, passed24h: 3, closed24h: 0 } }),
     person("martina", "working", "Lavora su FRA-56 · 72%", now, { activeTaskId: "iss-56", stats: { received24h: 1, passed24h: 0, closed24h: 1 } }),
     person("sofia", "working", "Lavora su FRA-55 · 45%", now, { activeTaskId: "iss-55", stats: { received24h: 1, passed24h: 0, closed24h: 0 } }),
     person("iris", "working", "Lavora su FRA-63 · 60%", now, { activeTaskId: "iss-63" }),
-    person("jamal", "idle", "Smista FRA-62", now, { stats: { received24h: 6, passed24h: 5, closed24h: 0 } }),
-    person("arold", "idle", "Smista FRA-60", now),
-    person("luke", "sleepy", "Dorme da 12 min", now),
+    person("jamal", "idle", "Da fare: FRA-62", now, { stats: { received24h: 6, passed24h: 5, closed24h: 0 } }),
+    person("arold", "idle", "Da fare: FRA-60", now),
+    person("luke", "sleepy", "Dorme", now, { stateSince: iso(now - 12 * MIN) }),
     person("daniel", "working", "Lavora su FRA-58 · 30%", now, { activeTaskId: "iss-58", stats: { received24h: 5, passed24h: 0, closed24h: 1 } }),
-    person("joe", "sleepy", "Dorme da 20 min", now, { stats: { received24h: 1, passed24h: 0, closed24h: 1 } }),
+    person("joe", "sleepy", "Dorme", now, { stateSince: iso(now - 20 * MIN), stats: { received24h: 1, passed24h: 0, closed24h: 1 } }),
   ];
   feed.unshift({ id: "ev-run-1", at: iso(now - 1 * MIN), kind: "run_started", actor: { kind: "agent", id: IDS.daniel, name: "Daniel Harper" }, issueId: "iss-58", identifier: "FRA-58", title: "Backup di Postgres fuori dalla microSD", parentId: "grp-1" });
   feed.unshift({ id: "ev-prog-1", at: iso(now - 0.5 * MIN), kind: "progress", actor: { kind: "agent", id: IDS.martina }, percent: 72, note: "Palette chiara pronta, manca la scura", issueId: "iss-56", identifier: "FRA-56", title: "Palette uniforme per gli sfondi", parentId: "grp-0" });
@@ -226,10 +226,12 @@ export function quietSnapshot(now = Date.now()): Snapshot {
     now,
   );
   const groups = groupsFor(tasks, [[0, 40, "Homelab più robusto"], [1, 39, "Knowledge base dell'infrastruttura"], [2, 38, "Nuova identità visiva"], [3, 37, "Comunicazione di gennaio"]], now, true);
+  // The worker's label is just "Dorme" (the duration lives in stateSince).
   const sleepy = (k: Who, mins: number, closed = 0) =>
-    person(k, "sleepy", `Dorme da ${mins >= 60 ? `${Math.floor(mins / 60)} h` : `${mins} min`}`, now, { agentStatus: "idle", stats: { received24h: closed, passed24h: 0, closed24h: closed } });
+    person(k, "sleepy", "Dorme", now, {
+      stateSince: iso(now - mins * MIN), agentStatus: "idle", stats: { received24h: closed, passed24h: 0, closed24h: closed } });
   const people: PersonView[] = [
-    person("board", "idle", "Nessuna richiesta", now),
+    person("board", "idle", "Nessun task", now),
     sleepy("laura", 85),
     sleepy("giulia", 240),
     sleepy("martina", 300),

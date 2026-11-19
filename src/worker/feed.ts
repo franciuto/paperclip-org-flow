@@ -115,28 +115,48 @@ export function pushRecent(list: FeedRecord[], rec: FeedRecord, max = 100): Feed
 
 export interface EventsPageResult { records: FeedRecord[]; cursor: string | null }
 
+/** A feed record with its per-company publish sequence number (monotonic, assigned at publish). */
+export interface SeqRecord { seq: number; record: FeedRecord }
+
 const DEFAULT_PAGE = 20;
 const MAX_PAGE = 50;
+/** Overlap applied to legacy ISO cursors: records are not published in `at` order. */
+export const ISO_CURSOR_OVERLAP_MS = 15_000;
+
+export function makeCursor(epoch: string, seq: number): string {
+  return `seq:${epoch}:${seq}`;
+}
+
+type Cursor = { kind: "none" } | { kind: "seq"; seq: number } | { kind: "stale" } | { kind: "iso"; at: string };
+
+export function parseCursor(after: string | null | undefined, epoch: string): Cursor {
+  if (!after) return { kind: "none" };
+  const m = /^seq:([^:]+):(\d+)$/.exec(after);
+  if (m) return m[1] === epoch ? { kind: "seq", seq: Number(m[2]) } : { kind: "stale" };
+  const t = Date.parse(after);
+  if (Number.isFinite(t)) return { kind: "iso", at: new Date(t - ISO_CURSOR_OVERLAP_MS).toISOString() };
+  return { kind: "none" };
+}
 
 /**
- * Incremental page for polling. `list` is newest first (as stored).
- * With `after`: records with `at` > after, oldest first, at most 50 (extended to include
- * records sharing the timestamp of the last one, so a cursor never splits equal timestamps).
- * Without `after`: the latest 20, oldest first.
+ * Incremental page for polling, ordered by publish sequence (oldest first).
+ * - cursor `seq:<epoch>:<n>` (what this function returns): records published after it, max 50;
+ * - cursor from another worker run (epoch changed after a restart) or ahead of the current
+ *   head: treated as no cursor (the latest 20) — the UI de-duplicates by id;
+ * - legacy ISO cursor: records with `at` > cursor − 15 s (overlap), max 50;
+ * - no cursor: the latest 20.
+ * The returned cursor is the sequence of the newest record returned, or the current head.
  */
-export function pageEvents(list: FeedRecord[], after?: string | null): EventsPageResult {
-  const ascending = [...list].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-  let records: FeedRecord[];
-  if (after) {
-    const newer = ascending.filter((r) => r.at > after);
-    records = newer.slice(0, MAX_PAGE);
-    if (newer.length > MAX_PAGE) {
-      const lastAt = records[records.length - 1].at;
-      for (let i = MAX_PAGE; i < newer.length && newer[i].at === lastAt; i++) records.push(newer[i]);
-    }
-  } else {
-    records = ascending.slice(-DEFAULT_PAGE);
-  }
-  const cursor = records.length > 0 ? records[records.length - 1].at : (after ?? null);
-  return { records, cursor };
+export function pageEvents(items: SeqRecord[], after: string | null | undefined, epoch: string): EventsPageResult {
+  const ordered = [...items].sort((a, b) => a.seq - b.seq);
+  const head = ordered.length > 0 ? ordered[ordered.length - 1].seq : 0;
+  let c = parseCursor(after, epoch);
+  if (c.kind === "stale" || (c.kind === "seq" && c.seq > head)) c = { kind: "none" };
+  let picked: SeqRecord[];
+  if (c.kind === "seq") picked = ordered.filter((x) => x.seq > c.seq).slice(0, MAX_PAGE);
+  else if (c.kind === "iso") picked = ordered.filter((x) => x.record.at > c.at).slice(0, MAX_PAGE);
+  else picked = ordered.slice(-DEFAULT_PAGE);
+  const last = picked.length > 0 ? picked[picked.length - 1].seq : c.kind === "seq" ? Math.max(c.seq, head) : head;
+  const cursor = ordered.length > 0 || c.kind === "seq" ? makeCursor(epoch, last) : c.kind === "iso" ? (after ?? null) : null;
+  return { records: picked.map((x) => x.record), cursor };
 }

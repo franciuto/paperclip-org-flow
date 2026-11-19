@@ -206,8 +206,10 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
   const parentReadable = (pid: string) => byId.has(pid) || !!base.parents[pid];
 
   /* Tasks */
+  const managers = new Map(base.agents.map((a) => [a.id, a.reportsTo]));
+  const managerOf = (id: string) => managers.get(id) ?? null;
   const sequences = holderSequences(input.history);
-  const bounceCounts = bouncesByIssue(input.history);
+  const bounceCounts = bouncesByIssue(input.history, managerOf);
   const tasks: TaskView[] = visible.map((i) => {
     const holderId = holderOf(i);
     const children = isParent(i.id)
@@ -292,7 +294,7 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
   const agentIds = new Set(agents.map((a) => a.id));
   const userIds = [...holders].filter((h) => h.startsWith("user:")).sort();
 
-  const signals = personSignals(input.history, now);
+  const signals = personSignals(input.history, now, managerOf);
   const lastRunFromFeed = new Map<string, LastRun>();
   const runActivity = new Map<string, string>();
   for (const r of input.feed) {

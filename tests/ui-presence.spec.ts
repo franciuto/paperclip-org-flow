@@ -46,9 +46,17 @@ describe("effectsOfRecord", () => {
     expect(fx.flashes[0]).toMatchObject({ personId: IDS.giulia, state: "confused", from: NOW });
   });
 
+  it("only worker-defined regressions count as 'Rimandato' (not parking in backlog/blocked)", () => {
+    const people = snap.people;
+    const parked = effectsOfRecord(rec({ issueId: "iss-57", from: { kind: "agent", id: IDS.laura }, to: { kind: "agent", id: IDS.giulia }, statusFrom: "in_review", statusTo: "backlog" }), people, snap.tasks, NOW, 0);
+    expect(parked.flashes[0]).toMatchObject({ state: "listening", label: "Ha ricevuto FRA-57" });
+    const reopened = effectsOfRecord(rec({ kind: "status", issueId: "iss-65", actor: { kind: "agent", id: IDS.joe }, statusFrom: "done", statusTo: "todo" }), people, snap.tasks, NOW, 0);
+    expect(reopened.flashes[0]).toMatchObject({ personId: IDS.joe, state: "confused", label: "Rimandato: FRA-65" });
+  });
+
   it("a handoff to a board user shows 'waiting' instead of an agent pose", () => {
     const fx = effectsOfRecord(rec({ issueId: "iss-58", from: { kind: "agent", id: IDS.daniel }, to: { kind: "user", id: "board-1" }, statusTo: "blocked" }), snap.people, snap.tasks, NOW);
-    expect(fx.flashes[0]).toMatchObject({ personId: IDS.board, state: "waiting" });
+    expect(fx.flashes[0]).toMatchObject({ personId: IDS.board, state: "waiting", label: "Da gestire: FRA-58" });
     expect(fx.flight?.toId).toBe(IDS.board);
   });
 
@@ -72,6 +80,16 @@ describe("effectsOfRecord", () => {
     const fx = effectsOfRecord(rec({ kind: "progress", issueId: "iss-55", percent: 61.6, actor: { kind: "agent", id: IDS.sofia } }), snap.people, snap.tasks, NOW);
     expect(fx.override).toMatchObject({ taskId: "iss-55", progress: 62 });
     expect(fx.flashes).toHaveLength(0);
+  });
+
+  it("a handoff to a party we can't resolve keeps the previous holder; to null means unassigned", () => {
+    const unknown = effectsOfRecord(rec({ issueId: "iss-62", from: { kind: "agent", id: IDS.jamal }, to: { kind: "agent", id: "not-on-chart" }, statusTo: "todo" }), snap.people, snap.tasks, NOW);
+    expect(unknown.override?.holderId).toBeUndefined();
+    expect(unknown.flight).toBeNull();
+    const tasks = applyOverrides(snap.tasks, [unknown.override!]);
+    expect(tasks.find((t) => t.id === "iss-62")!.holderId).toBe(IDS.jamal);
+    const unassigned = effectsOfRecord(rec({ issueId: "iss-62", from: { kind: "agent", id: IDS.jamal }, to: null }), snap.people, snap.tasks, NOW);
+    expect(unassigned.override?.holderId).toBeNull();
   });
 
   it("unknown tasks and people produce no flight and no crash", () => {

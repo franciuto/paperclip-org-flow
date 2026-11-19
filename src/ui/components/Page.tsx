@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useHostNavigation, type PluginPageProps } from "@paperclipai/plugin-sdk/ui";
-import { STANDALONE_COLOR, type FeedRecord, type PersonView, type Snapshot, type TaskView } from "../../shared/types.js";
+import { useHostNavigation, usePluginAction, usePluginToast, type PluginPageProps, type PluginToastFn } from "@paperclipai/plugin-sdk/ui";
+import { ACTION_PING, STANDALONE_COLOR, type FeedRecord, type Party, type PersonView, type Snapshot, type TaskView } from "../../shared/types.js";
 import { chipWidthFor } from "../chips.js";
 import { clockTime, relativeTime, taskCode } from "../format.js";
 import { useNow, usePrefersReducedMotion, useSimulation } from "../hooks.js";
 import { layoutOrg } from "../layout.js";
-import { activeGroups, CONNECTION_LABEL, heldByPerson, isOpenTask, liveCounts, mergeFeed, recentlyClosed, sortGroups, touchedBy } from "../model.js";
+import { announce, flushAnnouncer, type Announcer } from "../poll.js";
+import { activeGroups, bucketUnknownHolders, CONNECTION_LABEL, displayLabel, OTHERS_ID, heldByPerson, isOpenTask, liveCounts, mergeFeed, recentlyClosed, sortGroups, touchedBy } from "../model.js";
 import {
   applyFlashes,
   applyOverrides,
+  describeRecord,
   effectsOfRecord,
   findTask,
   FLIGHT_MS,
   mergeFlashes,
   nextFlashChange,
   pruneOverrides,
+  resolveParty,
   type Flash,
   type Flight,
   type TaskOverride,
@@ -26,8 +29,64 @@ import { ActivityFeed, KpiStrip, ParentStrip, PersonCard, QuietStrip, TaskCard, 
 
 const FRESH_MS = 2600;
 
-export function OrgFlowPage({ context }: PluginPageProps) {
+/**
+ * Page slot. Keyed by company: switching company remounts everything (feed, flashes, overrides,
+ * flights, selection, cursor), so nothing leaks from one company to the other.
+ */
+export function OrgFlowPage(props: PluginPageProps) {
   useStyles();
+  return <OrgFlowPageInner key={props.context.companyId ?? "-"} {...props} />;
+}
+
+/** Toast if the host provides it (older hosts may not register usePluginToast). */
+function useOptionalToast(): PluginToastFn | null {
+  try {
+    return usePluginToast();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Small diagnostics control next to the connection indicator: calls ACTION_PING (the worker
+ * answers and emits a "ping" record, which then shows up in the activity feed).
+ */
+function PingButton({ companyId }: { companyId: string }) {
+  const ping = usePluginAction(ACTION_PING);
+  const toast = useOptionalToast();
+  const [state, setState] = useState<{ busy: boolean; msg: string | null; ok: boolean }>({ busy: false, msg: null, ok: true });
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const show = (ok: boolean, title: string, body?: string) => {
+    const shown = toast?.({ title, body, tone: ok ? "success" : "error", dedupeKey: "org-flow-ping" }) ?? null;
+    setState({ busy: false, ok, msg: shown ? null : title });
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setState((s) => ({ ...s, msg: null })), 5000);
+  };
+  const run = async () => {
+    setState({ busy: true, msg: null, ok: true });
+    try {
+      await ping({ companyId });
+      show(true, "Connessione verificata", "Il worker ha risposto: l'evento di prova compare tra le attività.");
+    } catch (err) {
+      const e = err as { message?: string };
+      show(false, `Verifica non riuscita: ${e?.message ?? "errore sconosciuto"}`);
+    }
+  };
+  return (
+    <>
+      <button type="button" className="of-mini" onClick={run} disabled={state.busy} title="Chiede al worker un evento di prova">
+        {state.busy ? "Verifico…" : "Verifica connessione"}
+      </button>
+      {state.msg && <span className={`of-mini-msg${state.ok ? "" : " of-bad"}`} role="status">{state.msg}</span>}
+    </>
+  );
+}
+
+const ANNOUNCE_GAP_MS = 8000;
+const ANNOUNCE_GAP_SIM_MS = 20_000;
+
+function OrgFlowPageInner({ context }: PluginPageProps) {
   const companyId = context.companyId ?? undefined;
   const nav = useHostNavigation();
   const reduced = usePrefersReducedMotion();
@@ -49,6 +108,26 @@ export function OrgFlowPage({ context }: PluginPageProps) {
   const viewRef = useRef<{ people: PersonView[]; tasks: TaskView[]; colorOf: (groupId: string) => string }>({ people: [], tasks: [], colorOf: () => STANDALONE_COLOR });
   const reducedRef = useRef(reduced);
   reducedRef.current = reduced;
+
+  // Screen-reader summary: at most one polite message every few seconds (never the whole feed).
+  const [announcement, setAnnouncement] = useState("");
+  const announcer = useRef<Announcer>({ lastAt: null, queued: null });
+  const announceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const say = useCallback((text: string) => {
+    const gap = simRef.current ? ANNOUNCE_GAP_SIM_MS : ANNOUNCE_GAP_MS;
+    const r = announce(announcer.current, text, Date.now(), gap);
+    announcer.current = r.state;
+    if (r.emit) setAnnouncement(r.emit);
+    else if (!announceTimer.current) {
+      announceTimer.current = setTimeout(() => {
+        announceTimer.current = null;
+        const f = flushAnnouncer(announcer.current, Date.now(), simRef.current ? ANNOUNCE_GAP_SIM_MS : ANNOUNCE_GAP_MS);
+        announcer.current = f.state;
+        if (f.emit) setAnnouncement(f.emit);
+      }, Math.max(100, (announcer.current.lastAt ?? 0) + gap - Date.now() + 50));
+    }
+  }, []);
+  useEffect(() => () => { if (announceTimer.current) clearTimeout(announceTimer.current); }, []);
 
   const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleRecords = useCallback((source: "live" | "sim", records: FeedRecord[], animate: boolean) => {
@@ -80,10 +159,17 @@ export function OrgFlowPage({ context }: PluginPageProps) {
       const ids = new Set(newFlights.map((f) => f.taskId));
       setFlights((prev) => [...prev.filter((f) => !ids.has(f.taskId)), ...newFlights]);
     }
+    const last = records[records.length - 1]!;
+    const nameOf = (party: Party | undefined) => {
+      const id = resolveParty(party, view.people);
+      const p = id ? view.people.find((x) => x.id === id) : undefined;
+      return p?.name ?? party?.name ?? (party?.kind === "user" ? "Board" : "qualcuno");
+    };
+    say(`${describeRecord(last, nameOf)}${last.identifier ? `: ${last.identifier}` : ""}${records.length > 1 ? ` (e altri ${records.length - 1} eventi)` : ""}`);
     setFresh((prev) => new Set([...prev, ...records.map((r) => r.id)]));
     if (freshTimer.current) clearTimeout(freshTimer.current);
     freshTimer.current = setTimeout(() => setFresh(new Set()), FRESH_MS);
-  }, []);
+  }, [say]);
   useEffect(() => () => { if (freshTimer.current) clearTimeout(freshTimer.current); }, []);
 
   const live = useLiveOrgFlow(companyId, useCallback((r: FeedRecord[], animate: boolean) => handleRecords("live", r, animate), [handleRecords]), { forceRefresh: !simOn });
@@ -128,8 +214,20 @@ export function OrgFlowPage({ context }: PluginPageProps) {
   const colorOf = useCallback((id: string) => groupById.get(id)?.color ?? STANDALONE_COLOR, [groupById]);
   const titleOf = useCallback((id: string) => groupById.get(id)?.title ?? "", [groupById]);
 
-  const tasks = useMemo(() => applyOverrides(base?.tasks ?? [], pruneOverrides(overrides, base?.generatedAt ?? null, nowMs)), [base?.tasks, base?.generatedAt, overrides, nowMs]);
-  const people = useMemo(() => applyFlashes(base?.people ?? [], flashes, nowMs), [base?.people, flashes, nowMs]);
+  // Overrides on top of the snapshot; tasks held by people not on the chart go to "Altri".
+  const bucket = useMemo(
+    () => bucketUnknownHolders(applyOverrides(base?.tasks ?? [], pruneOverrides(overrides, base?.generatedAt ?? null, nowMs)), base?.people ?? []),
+    [base?.tasks, base?.people, base?.generatedAt, overrides, nowMs],
+  );
+  const tasks = bucket.tasks;
+  const people = useMemo(
+    () =>
+      applyFlashes(bucket.others ? [...(base?.people ?? []), bucket.others] : base?.people ?? [], flashes, nowMs).map((p) => {
+        const label = displayLabel(p, displayNow);
+        return label === p.stateLabel ? p : { ...p, stateLabel: label };
+      }),
+    [base?.people, bucket.others, flashes, nowMs, displayNow],
+  );
   viewRef.current = { people, tasks, colorOf };
   const personById = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
 
@@ -138,7 +236,7 @@ export function OrgFlowPage({ context }: PluginPageProps) {
   const chipW = useMemo(() => chipWidthFor(tasks.filter(isOpenTask).map(taskCode)), [tasks]);
   const layoutKey = people.map((p) => `${p.id}|${p.kind}|${p.reportsTo ?? ""}|${p.name}|${held.get(p.id)?.length ?? 0}`).join("\n") + `#${chipW}`;
   const layout = useMemo(
-    () => layoutOrg(people.map((p) => ({ id: p.id, kind: p.kind, reportsTo: p.reportsTo, name: p.name, chipCount: held.get(p.id)?.length ?? 0 })), chipW),
+    () => layoutOrg(people.map((p) => ({ id: p.id, kind: p.kind, reportsTo: p.reportsTo, name: p.name, chipCount: held.get(p.id)?.length ?? 0, detached: p.id === OTHERS_ID })), chipW),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [layoutKey],
   );
@@ -183,6 +281,7 @@ export function OrgFlowPage({ context }: PluginPageProps) {
   if (!base) {
     return (
       <div className="of-root">
+        {live.streamTap}
         <div className="of-page">
           <div className="of-titlerow"><h1 className="of-h1">Org Flow</h1></div>
           {live.error ? (
@@ -200,13 +299,16 @@ export function OrgFlowPage({ context }: PluginPageProps) {
 
   return (
     <div className="of-root">
+      {live.streamTap}
+      <div className="of-sr" role="status" aria-live="polite" aria-atomic="true">{announcement}</div>
       <div className="of-page">
         <header>
           <div className="of-titlerow">
             <h1 className="of-h1">Org Flow</h1>
-            <span className={`of-conn ${conn.cls}`} role="status" title={live.lastOkAt && !simOn ? `Ultimo aggiornamento ${relativeTime(new Date(live.lastOkAt).toISOString(), nowMs)}` : undefined}>
+            <span className={`of-conn ${conn.cls}`} title={live.lastOkAt && !simOn ? `Ultimo aggiornamento ${relativeTime(new Date(live.lastOkAt).toISOString(), nowMs)}` : undefined}>
               <i aria-hidden="true" />{conn.text}
             </span>
+            {!simOn && <PingButton companyId={companyId} />}
             <span className="of-clock" aria-label={`Ora ${clockTime(displayNow)}`}>{clockTime(displayNow)}</span>
             <div className="of-controls">
               {showSim && (

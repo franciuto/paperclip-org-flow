@@ -1,0 +1,49 @@
+# Changelog
+
+Versioni di Org Flow. La versione che vede Paperclip è quella in `src/manifest.ts`.
+
+## [1.0.0] — non rilasciata (in sviluppo)
+
+Prima versione completa. Specifica in [docs/specifica.md](docs/specifica.md).
+
+### Aggiunto
+
+- Pagina `/<prefisso>/org-flow` con:
+  - striscia dei task padre con avanzamento reale (figli chiusi / figli totali, annullati esclusi) e persone coinvolte; clic per evidenziare un gruppo;
+  - riepilogo "Al lavoro", "Rivedono", "Dormono", "Aspettano te";
+  - organigramma live con i personaggi di Paperclip, stati visivi (`working`, `thinking`, `listening`, `success`, `confused`, `sleepy`, `idle`, `paused`, `waiting`) e chip dei task in mano con stato e percentuale;
+  - volo animato del chip nei passaggi di mano e stati immediati all'arrivo degli eventi;
+  - schede di dettaglio del task (fonte della percentuale, percorso con i tempi, rimbalzi, link a Paperclip) e della persona (task per gruppo, statistiche 24 h);
+  - feed "Attività in diretta";
+  - stato tranquillo con i task chiusi di recente;
+  - modalità Simulazione con dati finti, senza scritture.
+- Riquadro per la Dashboard di Paperclip (`dashboardWidget`).
+- Percentuale dei task da quattro fonti: valore riportato dall'agente, sotto-task, checklist del documento `plan`, stima dallo stato.
+- Strumento per gli agenti `report_progress` (`issue`, `percent`, `note`), limitato ai task propri e dei sottoposti.
+- Cronologia dei passaggi nello stato del plugin (ultime 300 voci per company): percorsi, rimbalzi, statistiche.
+- Colori stabili per task padre.
+- Impostazioni per company: `sleepAfterMinutes`, `keepClosedHours`, `enableSimulation`.
+- Aggiornamento in diretta via polling (`events` ogni 3 s con cursore, `snapshot` su richiesta, `refresh` ogni 60 s); lo stream resta pronto per quando Paperclip lo collegherà.
+- Azioni `ping` (evento di prova) e `refresh`.
+- Tema chiaro e scuro, layout per telefono, `prefers-reduced-motion`.
+- Banco di prova visivo con screenshot (`npm run test:ui`).
+- Documentazione in `docs/`.
+
+### Modificato
+
+- Il feed è salvato nella chiave `feed` (prima `recent-feed`, che viene ancora letta se `feed` è vuota).
+- Nuove capability: `issue.subtree.read`, `issue.documents.read`, `agent.tools.register`, `ui.dashboardWidget.register`. All'aggiornamento Paperclip può chiedere di approvarle.
+
+## [0.1.0] — 2026-11-19
+
+Installata in produzione il 2026-11-19 verso le 00:15 (backup `~/.paperclip/backups-manual/pre-plugin-org-flow-install-20261119-001550.dump`).
+
+### Aggiunto
+
+- Versione minima per verificare eventi e streaming.
+- Worker che ascolta `issue.created`, `issue.updated`, `agent.run.started/finished/failed` e li trasforma in un feed di passaggi di mano, cambi di stato e run, con nomi e titoli.
+- Feed degli ultimi 100 eventi per company nello stato del plugin (chiave `recent-feed`), data key `recent`, azione `ping`.
+- Pagina `org-flow` con il feed e link nella barra laterale.
+- Prototipo statico, contratto dati e specifica della 1.0.
+
+Con questa versione si è verificato che lo stream dei plugin non è collegato dall'host (501): vedi [docs/decisioni.md](docs/decisioni.md).

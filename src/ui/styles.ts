@@ -72,6 +72,11 @@ export const CSS = `
 .of-conn.of-offline i{animation:none}
 .of-conn.of-sim{color:var(--of-accent)}
 @keyframes of-blink{0%,100%{opacity:1}50%{opacity:.25}}
+.of-root .of-mini{border:1px solid var(--of-border);background:transparent;border-radius:999px;padding:1px 9px;font-size:11.5px;color:var(--of-muted-fg);cursor:pointer;line-height:1.5}
+.of-root .of-mini:hover{color:var(--of-fg);background:var(--of-sunken)}
+.of-root .of-mini:disabled{opacity:.6;cursor:progress}
+.of-mini-msg{font-size:12px;color:var(--of-st-done)}
+.of-mini-msg.of-bad{color:var(--of-crit)}
 .of-clock{font-family:var(--of-mono);font-size:12.5px;color:var(--of-muted-fg);font-variant-numeric:tabular-nums}
 .of-controls{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .of-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--of-border);background:var(--of-card);border-radius:8px;padding:5px 11px;cursor:pointer;font-size:13px;line-height:1.3}
@@ -340,17 +345,37 @@ export const CSS = `
 }
 `;
 
-/** Inject the stylesheet once per document (shared by page, widget and sidebar). */
-export function ensureStyles(doc: Document | undefined = typeof document === "undefined" ? undefined : document): void {
-  if (!doc || doc.getElementById(STYLE_ID)) return;
+/** Minimal document surface used by ensureStyles (lets tests pass a fake document). */
+export interface StyleDoc {
+  getElementById(id: string): { textContent: string | null } | null;
+  createElement(tag: "style"): { id: string; textContent: string | null };
+  head: { appendChild(node: unknown): unknown };
+}
+
+/**
+ * Inject the stylesheet once per document (shared by page, widget and sidebar). If a style element
+ * from an older plugin version is already there (the host keeps the document across plugin
+ * upgrades), its content is replaced.
+ */
+export function ensureStyles(doc: StyleDoc | undefined = typeof document === "undefined" ? undefined : (document as unknown as StyleDoc), css = CSS): void {
+  if (!doc) return;
+  const existing = doc.getElementById(STYLE_ID);
+  if (existing) {
+    if (existing.textContent !== css) existing.textContent = css;
+    return;
+  }
   const el = doc.createElement("style");
   el.id = STYLE_ID;
-  el.textContent = CSS;
+  el.textContent = css;
   doc.head.appendChild(el);
 }
 
+let ensured = false;
 export function useStyles(): void {
-  // Insert before paint where possible; effect fallback keeps SSR-safe.
-  if (typeof document !== "undefined") ensureStyles(document);
+  // Once per module load (a plugin upgrade loads a new module, so the check runs again).
+  if (!ensured && typeof document !== "undefined") {
+    ensureStyles();
+    ensured = true;
+  }
   useEffect(() => ensureStyles(), []);
 }

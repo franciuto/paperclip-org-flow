@@ -6,6 +6,7 @@
  * - a scripted sequence of worker events is pushed into the store over time; the snapshot is
  *   updated 600 ms after each event, like the worker's debounce.
  * Query string: ?fixture=busy|quiet  &eventsFail=1 (every events poll fails)
+ *   &slow=<ms> (events replies take that long: polling must not starve)  &orphan=1 (Iris missing from people)
  */
 import { useCallback, useEffect, useState } from "react";
 import type { EventsPage, FeedRecord, PersonView, Snapshot, TaskView } from "../../src/shared/types.js";
@@ -16,6 +17,7 @@ const FIXTURE = qs.get("fixture") ?? "busy";
 const START = Date.now();
 
 let snapshot: Snapshot = FIXTURE === "quiet" ? quietSnapshot(START) : busySnapshot(START);
+if (qs.get("orphan") === "1") snapshot = { ...snapshot, people: snapshot.people.filter((p) => p.id !== IDS.iris) };
 const log: FeedRecord[] = [...snapshot.feed].reverse(); // oldest first
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -52,7 +54,7 @@ const BUSY_SCRIPT: Step[] = [
     rec: { kind: "status", ...base(57, "Guida all'uso degli avatar", 0), actor: agent("laura"), statusFrom: "in_review", statusTo: "done" },
     apply: (s) => {
       patchTask(s, "FRA-57", { status: "done", progress: 100, closedAt: iso() });
-      patchPerson(s, IDS.laura, { state: "success", stateLabel: "Fatto! FRA-57" });
+      patchPerson(s, IDS.laura, { state: "success", stateLabel: "Ha chiuso FRA-57" });
       s.groups = s.groups.map((g) => (g.id === "grp-0" ? { ...g, childrenDone: g.childrenDone + 1, progress: Math.round(((g.childrenDone + 1) / g.childrenTotal) * 100) } : g));
     },
   },
@@ -62,7 +64,7 @@ const BUSY_SCRIPT: Step[] = [
     apply: (s) => {
       patchTask(s, "FRA-56", { holderId: IDS.giulia, status: "in_review", progress: 100 }, IDS.giulia);
       patchPerson(s, IDS.martina, { state: "idle", stateLabel: "Libero" });
-      patchPerson(s, IDS.giulia, { state: "thinking", stateLabel: "Rivede FRA-56" });
+      patchPerson(s, IDS.giulia, { state: "thinking", stateLabel: "Revisiona FRA-56" });
     },
   },
   {
@@ -98,6 +100,7 @@ if (FIXTURE === "busy" && qs.get("script") !== "0") {
         const next = clone(snapshot);
         step.apply?.(next);
         next.feed = [...log].reverse().slice(0, 100);
+        if (qs.get("orphan") === "1") next.people = next.people.filter((p) => p.id !== IDS.iris);
         next.generatedAt = iso();
         snapshot = next;
       }, 600);
@@ -117,6 +120,7 @@ function resolve(key: string, params: Record<string, unknown>): unknown {
   throw new Error(`Chiave dati sconosciuta: ${key}`);
 }
 
+// Like the host: keyed on JSON.stringify(params); refresh() cancels (ignores) the previous request.
 export function usePluginData<T = unknown>(key: string, params?: Record<string, unknown>) {
   const pkey = JSON.stringify(params ?? {});
   const [n, setN] = useState(0);
@@ -131,7 +135,7 @@ export function usePluginData<T = unknown>(key: string, params?: Record<string, 
       } catch (err) {
         setState({ data: null, loading: false, error: { code: "WORKER_ERROR", message: (err as Error).message } });
       }
-    }, 40);
+    }, key === "events" ? Number(qs.get("slow") ?? 40) : 40);
     return () => {
       dead = true;
       clearTimeout(t);
@@ -147,7 +151,11 @@ export function usePluginStream<T = unknown>(_channel: string, _options?: { comp
 }
 
 export function usePluginAction(key: string) {
-  return useCallback(async (_params?: Record<string, unknown>) => (key === "refresh" ? clone(snapshot) : { ok: true }), [key]);
+  return useCallback(async (_params?: Record<string, unknown>) => {
+    if (key === "refresh") return clone(snapshot);
+    if (key === "ping") log.push({ id: `ping-${seq++}`, at: iso(), kind: "ping" });
+    return { ok: true };
+  }, [key]);
 }
 
 const navigation = {
