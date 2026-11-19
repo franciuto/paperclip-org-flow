@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HOST_FONT = pathlib.Path.home() / ".paperclip/cli/current/node_modules/@paperclipai/server/ui-dist/fonts/InterVariable.woff2"
+HOST_ASSETS = pathlib.Path.home() / ".paperclip/cli/current/node_modules/@paperclipai/server/ui-dist/assets"
 AVATAR = re.compile(r"^/api/agent-avatars/cap-v1/([a-z0-9-]+)/([a-z]+)\.png$")
 
 
@@ -28,11 +29,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return str(ROOT / "tests/ui/harness.html")
         if p == "/harness.js":
             return str(ROOT / "tests/ui/out/harness.js")
+        if p == "/host.css":
+            # Paperclip's full stylesheet (Tailwind preflight etc.), to catch host CSS side effects
+            css = sorted(HOST_ASSETS.glob("index-*.css"), key=lambda f: f.stat().st_size)
+            return str(css[-1]) if css else str(ROOT / "tests/ui/harness.html")
         if p == "/fonts/InterVariable.woff2":
             return str(HOST_FONT)
         m = AVATAR.match(p)
         if m:
             return str(ROOT / "prototype/poses" / f"{m.group(1)}-{m.group(2)}.png")
+        if p.startswith("/api/assets/"):
+            return str(ROOT / "tests/ui/photos/sample.png")
         if p.startswith("/FRA/"):
             return str(ROOT / "tests/ui/harness.html")
         return super().translate_path(path)

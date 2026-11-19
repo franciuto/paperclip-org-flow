@@ -180,7 +180,7 @@ export const CSS = `
 .of-feedbox{border:1px solid var(--of-border);border-radius:var(--of-r);background:var(--of-card);max-height:520px;overflow-y:auto;padding-top:6px}
 .of-scrollhint{position:sticky;left:0;margin:0;padding:2px 14px 4px;font-size:11.5px;color:var(--of-muted-fg);width:fit-content}
 .of-legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:1px solid var(--of-border);font-size:12px;color:var(--of-muted-fg);align-items:center}
-.of-legend svg{width:12px;height:12px;vertical-align:-2px;margin-right:5px}
+.of-legend svg{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin-right:5px}
 .of-legend .of-hint{margin-left:auto}
 @media (max-width:640px){.of-legend .of-hint{margin-left:0}}
 
@@ -344,7 +344,7 @@ export const CSS = `
 .of-feed-empty{padding:6px 16px 16px;font-size:12.5px;color:var(--of-muted-fg);margin:0}
 
 /* avatars (HTML) */
-.of-av{display:inline-block;flex:none;object-fit:contain;vertical-align:middle}
+.of-av{display:inline-block;flex:none;object-fit:contain;vertical-align:middle;max-width:none;aspect-ratio:1/1;min-width:0}
 .of-av-photo{border-radius:50%;object-fit:cover}
 .of-av-user{border-radius:50%;background:var(--of-sunken);border:1px dashed var(--of-edge);display:inline-grid;place-items:center;color:var(--of-muted-fg)}
 .of-av-user svg{width:60%;height:60%}

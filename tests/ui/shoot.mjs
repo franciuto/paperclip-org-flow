@@ -49,6 +49,14 @@ const CAPTURES = [
   { name: "slow-replies", q: "fixture=busy&slow=5000", size: "1440,560", budget: 26000 },
   { name: "orphan-holder", q: "fixture=busy&orphan=1&script=0", size: "1440,1300" },
   { name: "ping", q: "fixture=quiet&ping=1", size: "1440,560", budget: 6000 },
+  { name: "photos-light", q: "fixture=busy&photos=1", size: "1440,1300" },
+  { name: "photos-person-dark", q: "fixture=busy&photos=1&select=person:Daniel&script=0&dark=1", size: "1440,1300" },
+  { name: "photos-phone", q: "fixture=busy&photos=1", size: "400,900" },
+  { name: "photos-hostcss", q: "fixture=busy&photos=1&hostcss=1", size: "1440,1300" },
+  { name: "photos-hostcss-person", q: "fixture=busy&photos=1&hostcss=1&select=person:Daniel&script=0", size: "1440,1300" },
+  { name: "photos-hostcss-phone", q: "fixture=busy&photos=1&hostcss=1", size: "400,900" },
+  { name: "photos-hostcss-widget", q: "view=widget&fixture=busy&photos=1&hostcss=1", size: "1100,520" },
+  { name: "photos-hostcss-sections", q: "fixture=busy&photos=1&hostcss=1&compact=1", size: "1440,1700" },
   { name: "offline", q: "fixture=busy&eventsFail=1&script=0", size: "1440,500", budget: 12000 },
 ];
 

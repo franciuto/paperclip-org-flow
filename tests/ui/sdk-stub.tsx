@@ -18,6 +18,8 @@ const START = Date.now();
 
 let snapshot: Snapshot = FIXTURE === "quiet" ? quietSnapshot(START) : busySnapshot(START);
 if (qs.get("orphan") === "1") snapshot = { ...snapshot, people: snapshot.people.filter((p) => p.id !== IDS.iris) };
+// &photos=1: every agent has an uploaded photo (as in production since 2026-11-19)
+if (qs.get("photos") === "1") snapshot = { ...snapshot, people: snapshot.people.map((p) => (p.kind === "agent" ? { ...p, customAvatarUrl: "/api/assets/sample/content" } : p)) };
 const log: FeedRecord[] = [...snapshot.feed].reverse(); // oldest first
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
