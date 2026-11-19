@@ -135,6 +135,16 @@ Lo sviluppo si fa in `~/workdir/Repos/org-flow`; la produzione gira dal submodul
    ```
 
    Se la versione aggiunge capability il plugin può fermarsi in `upgrade_pending` finché non le approvi.
+
+   **Verificato il 2026-11-19 con il passaggio 1.0.0 → 1.1.0:** in produzione la ricarica automatica ha aggiornato il bundle della UI, ma il worker e il registro sono rimasti alla versione precedente (`plugin list` mostrava ancora 1.0.0 e lo snapshot non aveva i reparti). Quando cambiano versione, impostazioni (`instanceConfigSchema`), capability o codice del worker, reinstalla dopo un dump del database:
+
+   ```bash
+   $PC plugin uninstall franciuto.org-flow    # senza --force: stato e impostazioni restano
+   $PC plugin install --local ~/ai-final-boss/paperclip-plugins/org-flow
+   $PC plugin list                            # ready e versione nuova
+   ```
+
+   Paperclip riusa lo stesso id del plugin, quindi cronologia e percentuali salvate restano.
 7. **Ricarica la pagina** nel browser: la UI nuova arriva solo con un ricaricamento.
 8. **Registra il puntatore** del submodule in `ai-final-boss`:
 
