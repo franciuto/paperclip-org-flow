@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 import { POSE_FOR_STATE, type PersonView, type TaskView } from "../../shared/types.js";
 import { CHIP_CODE_X, CHIP_H, CHIP_PAD_R, chipCodeRoom, chipCodeWidth } from "../chips.js";
 import { clampPercent, poseUrl, statusLabel, taskCode, tint, truncateToWidth } from "../format.js";
-import { CHIPS_TOP, DEPT_LABEL_INSET, DEPT_LABEL_Y, LABEL_FONT, type OrgLayout } from "../layout.js";
+import { CHIPS_TOP, DEPT_LABEL_INSET, DEPT_LABEL_Y, LABEL_FONT, NAME_Y, STATE_Y, TITLE_Y, type OrgLayout } from "../layout.js";
 import { OTHERS_ID } from "../model.js";
 import { rovingNext } from "../poll.js";
 import { fitScale } from "../viewport.js";
@@ -317,8 +317,8 @@ export function OrgChart(props: OrgChartProps) {
                   style={isTouched && touchColor ? ({ ["--of-tc" as string]: touchColor } as CSSProperties) : undefined}
                 >
                   <title>{`${p.name}${p.title ? ` · ${p.title}` : ""}`}</title>
-                  <rect className="of-hit" x={-half} y={-52} width={n.width} height={108} />
-                  <rect className="of-focus" x={-half + 1} y={-53} width={n.width - 2} height={110} rx={10} />
+                  <rect className="of-hit" x={-half} y={-52} width={n.width} height={122} />
+                  <rect className="of-focus" x={-half + 1} y={-53} width={n.width - 2} height={124} rx={10} />
                   <circle className="of-halo-bg" cx={0} cy={-12} r={33} />
                   <circle className="of-halo" cx={0} cy={-12} r={33} />
                   <g className="of-bob">
@@ -351,8 +351,9 @@ export function OrgChart(props: OrgChartProps) {
                       <text textAnchor="middle" dominantBaseline="central">{tasks.length > 99 ? "99+" : tasks.length}</text>
                     </g>
                   )}
-                  <text className="of-nm" textAnchor="middle" y={34}>{n.name}</text>
-                  <text className="of-stl" textAnchor="middle" y={49}>{label}</text>
+                  <text className="of-nm" textAnchor="middle" y={NAME_Y}>{n.name}</text>
+                  {n.title ? <text className="of-ttl" textAnchor="middle" y={TITLE_Y}>{n.title}</text> : null}
+                  <text className="of-stl" textAnchor="middle" y={n.title ? STATE_Y : TITLE_Y}>{label}</text>
                 </g>
                 {tasks.length > 0 && (
                   <g transform={`translate(0 ${CHIPS_TOP})`}>

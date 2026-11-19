@@ -89,14 +89,14 @@ Le regole esatte sono in [stati-e-percentuali.md](stati-e-percentuali.md). Le po
 | `departmentId` | string \| null (facoltativo) | reparto della persona (`DepartmentView.id`); `null` per i vertici, gli utenti e gli agenti terminati |
 | `kind` | `"agent"` \| `"user"` | |
 | `name` | string | nome dell'agente; per gli utenti `"Board"`, `"Board 2"`, … in ordine di id |
-| `title` | string \| null | titolo dell'agente in Paperclip |
+| `title` | string \| null | titolo dell'agente in Paperclip; se vuoto, l'etichetta del ruolo di Paperclip (`AGENT_ROLE_LABELS`, es. `ceo` → "CEO"); `null` se manca anche il ruolo. Mostrato sotto il nome nell'organigramma |
 | `role` | string \| null | ruolo dell'agente |
 | `reportsTo` | string \| null | id del responsabile. `null` per i vertici, per gli utenti e quando il responsabile non è tra le persone mostrate |
 | `paletteId` | string \| null | palette del personaggio (`appearance.paletteId`); `null` per gli utenti |
 | `customAvatarUrl` | string \| null | `/api/assets/<id>/content` se l'agente ha una foto caricata; la UI la preferisce al personaggio |
 | `agentStatus` | string \| null | stato grezzo di Paperclip (`idle`, `running`, `paused`, `error`, `terminated`, …); `null` per gli utenti |
 | `state` | `VisualState` | stato visivo calcolato |
-| `stateLabel` | string | etichetta breve sotto il nome, es. `"Lavora su FRA-62 · 40%"` |
+| `stateLabel` | string | etichetta breve sotto il titolo (sotto il nome se il titolo manca), es. `"Lavora su FRA-62 · 40%"` |
 | `stateSince` | string \| null | da quando vale lo stato, quando ha senso |
 | `activeTaskId` | string \| null | task a cui si riferisce lo stato |
 | `lastActivityAt` | string \| null | ultima attività nota (cronologia, run, heartbeat) |

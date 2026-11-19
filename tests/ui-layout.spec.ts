@@ -185,3 +185,18 @@ describe("placeChips", () => {
     expect(CHIP_CODE_X + chipCodeRoom(w) + CHIP_TEXT_GAP).toBeLessThan(w - CHIP_PAD_R - 4 * CHIP_FONT * 0.6);
   });
 });
+
+describe("node titles", () => {
+  it("reserves width for a long title and keeps it on the node", () => {
+    const people: LayoutInput[] = [
+      { id: "a", kind: "agent", reportsTo: null, name: "Al", title: "Head of Systems & Networking Operations", chipCount: 0 },
+    ];
+    const l = layoutOrg(people, 76);
+    expect(l.nodes.a!.title.length).toBeGreaterThan(0);
+    expect(l.nodes.a!.width).toBeGreaterThanOrEqual(MIN_NODE_W);
+  });
+  it("has no title when none is given", () => {
+    const l = layoutOrg([{ id: "a", kind: "agent", reportsTo: null, name: "Al", chipCount: 0 }], 76);
+    expect(l.nodes.a!.title).toBe("");
+  });
+});

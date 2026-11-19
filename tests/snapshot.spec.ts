@@ -211,7 +211,11 @@ describe("host mappers", () => {
       id: "x", name: "Laura", role: "ceo", title: "", status: "idle", reportsTo: null,
       appearance: { paletteId: "cherry-pop", customAvatarAssetId: "asset-1" }, lastHeartbeatAt: new Date(NOW),
     })!;
-    expect(a).toMatchObject({ paletteId: "cherry-pop", customAvatarAssetId: "asset-1", title: null, lastHeartbeatAt: ago(0) });
+    // Empty title falls back to Paperclip's own role label (AGENT_ROLE_LABELS).
+    expect(a).toMatchObject({ paletteId: "cherry-pop", customAvatarAssetId: "asset-1", title: "CEO", lastHeartbeatAt: ago(0) });
+    expect(toAgentLite({ id: "y", name: "Giulia", role: "designer", title: "Graphic Team Lead" })!.title).toBe("Graphic Team Lead");
+    expect(toAgentLite({ id: "z", name: "Ugo", role: "something-new", title: null })!.title).toBeNull();
+    expect(toAgentLite({ id: "w", name: "Ada", role: null, title: null })!.title).toBeNull();
     expect(toAgentLite(null)).toBeNull();
   });
   it("maps issues with closedAt and a running active run", () => {

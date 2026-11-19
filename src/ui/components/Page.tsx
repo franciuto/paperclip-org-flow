@@ -25,7 +25,7 @@ import {
 import { useStyles } from "../styles.js";
 import { useLiveOrgFlow } from "../useLive.js";
 import { OrgChart, StatusGlyph, type Selection } from "./OrgChart.js";
-import { Drawer, Section, useFillHeight, useSections } from "./Layout.js";
+import { Drawer, Section, useFillHeight, useFullscreen, useSections } from "./Layout.js";
 import { ActivityFeed, KpiStrip, ParentStrip, PersonCard, QuietStrip, TaskCard, type FeedContext } from "./Panels.js";
 
 const FRESH_MS = 2600;
@@ -245,7 +245,7 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
     people.map((p) => `${p.id}|${p.kind}|${p.reportsTo ?? ""}|${p.name}|${held.get(p.id)?.length ?? 0}`).join("\n") +
     `#${chipW}#` + departments.map((d) => `${d.leadId}:${d.name}:${d.memberIds.length}`).join(",");
   const layout = useMemo(
-    () => layoutOrg(people.map((p) => ({ id: p.id, kind: p.kind, reportsTo: p.reportsTo, name: p.name, chipCount: held.get(p.id)?.length ?? 0, detached: p.id === OTHERS_ID })), chipW, departments),
+    () => layoutOrg(people.map((p) => ({ id: p.id, kind: p.kind, reportsTo: p.reportsTo, name: p.name, title: p.kind === "agent" ? p.title : null, chipCount: held.get(p.id)?.length ?? 0, detached: p.id === OTHERS_ID })), chipW, departments),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [layoutKey],
   );
@@ -282,7 +282,9 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
   const conn = simOn ? { cls: "of-sim", text: "Simulazione" } : { cls: live.connection === "live" ? "" : live.connection === "connecting" ? "of-connecting" : "of-offline", text: CONNECTION_LABEL[live.connection] };
 
   const stageRef = useRef<HTMLElement>(null);
-  const stageHeight = useFillHeight(stageRef, !!base);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const fullscreen = useFullscreen(rootRef);
+  const stageHeight = useFillHeight(stageRef, !!base, fullscreen.mode ?? "");
   const sections = useSections();
 
   /* ---------- states without data ---------- */
@@ -315,7 +317,7 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
   const closeDetail = () => setSel(null);
 
   return (
-    <div className="of-root">
+    <div className={`of-root${fullscreen.mode === "overlay" ? " of-immersive" : ""}${fullscreen.mode ? " of-fs" : ""}`} ref={rootRef}>
       {live.streamTap}
       <div className="of-sr" role="status" aria-live="polite" aria-atomic="true">{announcement}</div>
       <div className="of-page of-full">
@@ -327,6 +329,14 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
           <span className="of-clock" aria-label={`Ora ${clockTime(displayNow)}`}>{clockTime(displayNow)}</span>
           {!simOn && <PingButton companyId={companyId} />}
           <div className="of-controls">
+            <button type="button" className="of-btn" aria-pressed={!!fullscreen.mode} onClick={fullscreen.toggle} title={fullscreen.mode ? "Esci dallo schermo intero (Esc)" : "Mostra Org Flow a schermo intero"}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                {fullscreen.mode
+                  ? <path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6" />
+                  : <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" />}
+              </svg>
+              {fullscreen.mode ? "Esci dallo schermo intero" : "Schermo intero"}
+            </button>
             {showSim && (
               <button type="button" className="of-btn" aria-pressed={simOn} onClick={() => setSimOn((v) => !v)}>
                 <span className="of-switch" aria-hidden="true" />Simulazione

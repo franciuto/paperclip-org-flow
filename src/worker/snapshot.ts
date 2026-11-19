@@ -3,6 +3,7 @@
  * history/run tracking and produces the Snapshot of the data contract.
  */
 
+import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
 import type {
   FeedRecord, GroupView, OrgFlowSettings, PersonView, Snapshot, TaskView,
 } from "../shared/types.js";
@@ -61,6 +62,11 @@ export function toIso(v: unknown): string | null {
   return null;
 }
 
+function roleLabel(role: string | null): string | null {
+  if (!role) return null;
+  return (AGENT_ROLE_LABELS as Record<string, string>)[role] ?? null;
+}
+
 export function toAgentLite(raw: unknown): AgentLite | null {
   const a = (raw && typeof raw === "object" ? raw : null) as Dict | null;
   const id = a && str(a.id);
@@ -69,7 +75,8 @@ export function toAgentLite(raw: unknown): AgentLite | null {
   return {
     id,
     name: str(a.name) ?? "Agente",
-    title: str(a.title),
+    // Title as set in Paperclip; if missing, Paperclip's own label for the role (e.g. ceo → "CEO").
+    title: str(a.title) ?? roleLabel(str(a.role)),
     role: str(a.role),
     reportsTo: str(a.reportsTo),
     status: str(a.status) ?? "idle",

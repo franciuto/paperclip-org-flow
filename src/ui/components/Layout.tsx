@@ -14,7 +14,7 @@ function scrollParent(el: HTMLElement): HTMLElement | null {
 }
 
 /** Height (px) that makes the element fill the visible viewport below its top edge. */
-export function useFillHeight(ref: RefObject<HTMLElement | null>, ready: boolean): number | null {
+export function useFillHeight(ref: RefObject<HTMLElement | null>, ready: boolean, mode: string = ""): number | null {
   const [h, setH] = useState<number | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -30,8 +30,42 @@ export function useFillHeight(ref: RefObject<HTMLElement | null>, ready: boolean
     compute();
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
-  }, [ref, ready]);
+  }, [ref, ready, mode]);
   return h;
+}
+
+export type FullscreenMode = "native" | "overlay" | null;
+
+/**
+ * Full screen for the plugin page. Uses the browser Fullscreen API on `ref`; where it is missing or
+ * refused (e.g. iPhone Safari) falls back to an "overlay" mode: the page covers the whole Paperclip
+ * UI with position:fixed (CSS class `of-immersive`). Esc or `toggle()` leaves either mode.
+ */
+export function useFullscreen(ref: RefObject<HTMLElement | null>): { mode: FullscreenMode; toggle: () => void } {
+  const [mode, setMode] = useState<FullscreenMode>(null);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onChange = () => setMode((m) => (document.fullscreenElement && document.fullscreenElement === ref.current ? "native" : m === "native" ? null : m));
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, [ref]);
+  useEffect(() => {
+    if (mode !== "overlay") return;
+    const onKey = (ev: globalThis.KeyboardEvent) => { if (ev.key === "Escape" && !ev.defaultPrevented) setMode(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mode]);
+  const toggle = useCallback(() => {
+    const el = ref.current;
+    if (mode === "native") { void document.exitFullscreen?.().catch(() => setMode(null)); return; }
+    if (mode === "overlay") { setMode(null); return; }
+    if (el && typeof el.requestFullscreen === "function" && document.fullscreenEnabled !== false) {
+      el.requestFullscreen().then(() => setMode("native"), () => setMode("overlay"));
+    } else {
+      setMode("overlay");
+    }
+  }, [mode, ref]);
+  return { mode, toggle };
 }
 
 /**

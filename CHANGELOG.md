@@ -2,6 +2,13 @@
 
 Versioni di Org Flow. La versione che vede Paperclip è quella in `src/manifest.ts`.
 
+## [1.2.0] — 2026-11-19
+
+### Aggiunto
+
+- Titolo di ogni agente sotto il nome, preso da Paperclip (campo titolo dell'agente). Se in Paperclip il titolo è vuoto si usa l'etichetta del ruolo di Paperclip (`AGENT_ROLE_LABELS`, per esempio `ceo` → "CEO"). Lo stato ("Dorme", "Lavora su…") scende di una riga.
+- Pulsante "Schermo intero" nell'intestazione: usa lo schermo intero del browser; dove non è disponibile (per esempio Safari su iPhone) la pagina copre tutta l'interfaccia di Paperclip. Si esce con Esc o con lo stesso pulsante.
+
 ## [1.1.0] — 2026-11-19
 
 ### Cambiato

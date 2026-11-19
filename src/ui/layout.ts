@@ -13,15 +13,18 @@
  *   between neighbouring departments. Edges coming from above stop at the top of the box.
  *
  * Node local coordinates (used by the SVG renderer): origin = centre of the character,
- * character image from y=-44 to y=20, name baseline at 34, state label at 49,
- * chips start at CHIPS_TOP.
+ * character image from y=-44 to y=20, name baseline at NAME_Y, title (from Paperclip) at TITLE_Y,
+ * state label at STATE_Y, chips start at CHIPS_TOP.
  */
 import { CHIP_GAP, CHIP_H, placeChips, type ChipPlacement } from "./chips.js";
 import { estimateTextWidth, truncateToWidth } from "./format.js";
 
 export const NODE_TOP = 56;          // space above the origin (halo, sparks, thought bubble)
-export const NODE_BASE_BOTTOM = 56;  // below the origin when the person holds no chips
-export const CHIPS_TOP = 60;         // chip block top, relative to origin
+export const NODE_BASE_BOTTOM = 70;  // below the origin when the person holds no chips
+export const NAME_Y = 34;
+export const TITLE_Y = 48;
+export const STATE_Y = 63;
+export const CHIPS_TOP = 74;         // chip block top, relative to origin
 export const NODE_ENTRY = -47;       // where incoming edges end (just above the character)
 export const NAME_FONT = 12.5;
 export const LABEL_FONT = 10.5;
@@ -47,6 +50,8 @@ export interface LayoutInput {
   kind: "agent" | "user";
   reportsTo: string | null;
   name: string;
+  /** Job title shown under the name (Paperclip title, or role label). */
+  title?: string | null;
   chipCount: number;
   /** Placed as a root but not linked to the users row (e.g. the "Altri" bucket). */
   detached?: boolean;
@@ -68,6 +73,7 @@ export interface NodeLayout {
   width: number;
   bottom: number;     // local y of the bottom edge
   name: string;       // display name, truncated to fit (the state label is truncated to `width` by the renderer)
+  title: string;       // job title from Paperclip (or role label), truncated; "" when unknown
   chips: ChipPlacement;
   parentId: string | null; // effective parent used by the layout (null for roots and users)
 }
@@ -179,7 +185,8 @@ export function layoutOrg(people: LayoutInput[], chipW: number, departments: Lay
   for (const p of people) {
     const chips = placeChips(p.chipCount, chipW, CHIP_H, CHIP_GAP);
     const name = truncateToWidth(p.name, MAX_TEXT_W, NAME_FONT, true);
-    const width = Math.ceil(Math.max(MIN_NODE_W, estimateTextWidth(name, NAME_FONT, true) + 12, chips.width + 8));
+    const title = p.title ? truncateToWidth(p.title, MAX_TEXT_W, LABEL_FONT) : "";
+    const width = Math.ceil(Math.max(MIN_NODE_W, estimateTextWidth(name, NAME_FONT, true) + 12, title ? estimateTextWidth(title, LABEL_FONT) + 12 : 0, chips.width + 8));
     nodes[p.id] = {
       id: p.id,
       kind: p.kind,
@@ -189,6 +196,7 @@ export function layoutOrg(people: LayoutInput[], chipW: number, departments: Lay
       width,
       bottom: chips.height ? CHIPS_TOP + chips.height : NODE_BASE_BOTTOM,
       name,
+      title,
       chips,
       parentId: p.kind === "agent" ? parentOf.get(p.id) ?? null : null,
     };

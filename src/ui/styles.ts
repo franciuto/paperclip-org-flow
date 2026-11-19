@@ -149,6 +149,9 @@ export const CSS = `
 /* main */
 /* full-page layout: compact header, chart filling the viewport, drawer over it, sections below */
 .of-page.of-full{max-width:none;padding:14px 16px 32px;gap:12px}
+.of-root:fullscreen{background:var(--of-bg);overflow-y:auto;width:100%;height:100%}
+.of-root::backdrop{background:var(--of-bg)}
+.of-root.of-immersive{position:fixed;inset:0;z-index:2147483000;background:var(--of-bg);overflow-y:auto;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 @media (min-width:720px){.of-page.of-full{padding:16px 24px 40px}}
 .of-head{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;min-height:34px}
 @media (min-width:720px){.of-head{flex-wrap:nowrap}.of-head > *{flex:none}}
@@ -189,6 +192,7 @@ export const CSS = `
 .of-dept .of-dept-n{font-weight:500;letter-spacing:0}
 .of-edge.of-dashed{stroke-dasharray:4 4}
 .of-nm{fill:var(--of-fg);font-size:12.5px;font-weight:600;font-family:var(--of-font)}
+.of-ttl{font-size:10.5px;font-family:var(--of-font);fill:var(--of-muted-fg);font-weight:500}
 .of-stl{font-size:10.5px;font-family:var(--of-font);fill:var(--of-muted-fg)}
 .of-node{cursor:pointer;outline:none}
 .of-node .of-hit{fill:transparent}

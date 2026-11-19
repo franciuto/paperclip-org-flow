@@ -10,6 +10,8 @@ Gira sull'istanza Paperclip di `ai-pi` (`https://agents.franciuto.com`). Chiave 
 
 - **Pagina `/<prefisso>/org-flow`** (in produzione `https://agents.franciuto.com/FRA/org-flow`), con link "Org Flow" nella barra laterale. In alto una riga compatta (titolo, indicatore "Live", ora, "Verifica connessione", interruttore "Simulazione"), poi:
   - l'**organigramma a tutta pagina**, largo quanto la pagina e alto quanto lo schermo, scalato per starci tutto (su telefono scorre di lato): i personaggi di Paperclip nella posa del loro stato (al lavoro, revisiona, ha ricevuto, ha chiuso, confuso, dorme, in pausa) e sotto ognuno i task in mano, con stato e percentuale;
+  - sotto ogni persona nome, titolo preso da Paperclip (o il ruolo, per esempio "CEO") e stato attuale;
+  - pulsante "Schermo intero" per vederla a tutto schermo (Esc per uscire);
   - ogni **reparto** (il sotto-albero di ciascun riporto diretto del CEO, per esempio Grafica o IT e infrastruttura) è racchiuso in un riquadro neutro con il nome e il numero di persone; il colore resta riservato ai task padre;
   - quando un task passa di mano il chip vola dal vecchio al nuovo assegnatario;
   - clic su un task o una persona: la **scheda di dettaglio** scorre sopra il bordo destro dell'organigramma (su telefono sale dal basso); si chiude con × o Esc. Task: percentuale e sua fonte, percorso tra le persone con i tempi, rimbalzi. Persona: task in mano, statistiche delle 24 ore;
