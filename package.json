@@ -1,6 +1,6 @@
 {
   "name": "paperclip-plugin-org-flow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "private": true,
   "description": "Org Flow: l'organigramma di Paperclip in diretta, con chi lavora su cosa, i task raggruppati per padre e i passaggi di mano animati",

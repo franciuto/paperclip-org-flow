@@ -4,7 +4,7 @@
  * - busySnapshot: a working afternoon (parent tasks, handoffs, a blocked task waiting for the board)
  * - quietSnapshot: production at night (everything closed recently, everyone sleeping)
  */
-import type { FeedRecord, GroupView, PersonView, Snapshot, TaskView, VisualState } from "../../src/shared/types.js";
+import type { DepartmentView, FeedRecord, GroupView, PersonView, Snapshot, TaskView, VisualState } from "../../src/shared/types.js";
 
 export const IDS = {
   board: "user:board-1",
@@ -36,6 +36,15 @@ const ORG: Array<[Who, string, string | null, Who | null, string | null]> = [
   ["joe", "Joe", "Librarian", "laura", "violet-ember"],
 ];
 
+/** Departments as the worker derives them: subtree under each direct report of the CEO. */
+export const DEPARTMENTS: DepartmentView[] = [
+  { id: IDS.giulia, name: "Grafica", leadId: IDS.giulia, memberIds: [IDS.giulia, IDS.martina, IDS.sofia] },
+  { id: IDS.iris, name: "Comunicazione", leadId: IDS.iris, memberIds: [IDS.iris] },
+  { id: IDS.jamal, name: "IT e infrastruttura", leadId: IDS.jamal, memberIds: [IDS.jamal, IDS.arold, IDS.luke, IDS.daniel] },
+  { id: IDS.joe, name: "Libreria", leadId: IDS.joe, memberIds: [IDS.joe] },
+];
+const deptOf = (id: string) => DEPARTMENTS.find((d) => d.memberIds.includes(id))?.id ?? null;
+
 const MIN = 60_000;
 const iso = (ms: number) => new Date(ms).toISOString();
 
@@ -58,6 +67,7 @@ function person(key: Who, state: VisualState, label: string, now: number, extra:
     activeTaskId: null,
     lastActivityAt: iso(now - 3 * MIN),
     stats: { received24h: 0, passed24h: 0, closed24h: 0 },
+    departmentId: deptOf(IDS[key]),
     ...extra,
   };
 }
@@ -207,6 +217,7 @@ export function busySnapshot(now = Date.now()): Snapshot {
     groups,
     feed: feed.slice(0, 100),
     settings: SETTINGS,
+    departments: DEPARTMENTS,
     counts: { working: 4, thinking: 1, sleepy: 2, waiting: 1, open: open.length, closed24h: 1 },
   };
 }
@@ -252,6 +263,7 @@ export function quietSnapshot(now = Date.now()): Snapshot {
     groups,
     feed: feed.slice(0, 100),
     settings: SETTINGS,
+    departments: DEPARTMENTS,
     counts: { working: 0, thinking: 0, sleepy: 10, waiting: 0, open: 0, closed24h: 5 },
   };
 }

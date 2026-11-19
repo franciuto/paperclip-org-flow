@@ -2,9 +2,10 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 import { POSE_FOR_STATE, type PersonView, type TaskView } from "../../shared/types.js";
 import { CHIP_CODE_X, CHIP_H, CHIP_PAD_R, chipCodeRoom, chipCodeWidth } from "../chips.js";
 import { clampPercent, poseUrl, statusLabel, taskCode, tint, truncateToWidth } from "../format.js";
-import { CHIPS_TOP, LABEL_FONT, type OrgLayout } from "../layout.js";
+import { CHIPS_TOP, DEPT_LABEL_INSET, DEPT_LABEL_Y, LABEL_FONT, type OrgLayout } from "../layout.js";
 import { OTHERS_ID } from "../model.js";
 import { rovingNext } from "../poll.js";
+import { fitScale } from "../viewport.js";
 import { FLIGHT_MS, type Flight } from "../presence.js";
 
 export type Selection = { type: "task" | "person"; id: string };
@@ -197,8 +198,6 @@ export interface OrgChartProps {
   ariaLabel: string;
 }
 
-const MIN_SCALE = 0.74;
-const MAX_SCALE = 1.12;
 
 export function OrgChart(props: OrgChartProps) {
   const { people, held, layout, chipW, selected, focusGroup, touched, touchColor, flights, onSelect } = props;
@@ -224,13 +223,15 @@ export function OrgChart(props: OrgChartProps) {
     const el = svgRef.current?.querySelector(`[data-fkey="${next.replace(/"/g, '\\"')}"]`) as (SVGElement & { focus(): void }) | null;
     el?.focus();
   };
-  const [avail, setAvail] = useState<number>(0);
+  // Box size (width and height): the chart is scaled to fit both ("contain").
+  const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  const avail = box.w;
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const measure = () => setAvail(el.clientWidth);
+    const measure = () => setBox((b) => (b.w === el.clientWidth && b.h === el.clientHeight ? b : { w: el.clientWidth, h: el.clientHeight }));
     measure();
     if (typeof ResizeObserver === "undefined") {
       window.addEventListener("resize", measure);
@@ -241,7 +242,9 @@ export function OrgChart(props: OrgChartProps) {
     return () => ro.disconnect();
   }, []);
 
-  const scale = avail ? Math.min(MAX_SCALE, Math.max(MIN_SCALE, (avail - 2) / layout.width)) : 1;
+  // Quantised to 2% steps so small layout changes (a chip row appearing) don't make it twitch.
+  const fit = fitScale(layout.width, layout.height, box.w - 4, box.h - 4);
+  const scale = avail ? Math.floor(fit.scale * 50) / 50 : 1;
 
   // When the chart is wider than its box (phones), start scrolled to the top of the org.
   const centred = useRef(false);
@@ -264,8 +267,20 @@ export function OrgChart(props: OrgChartProps) {
   };
 
   return (
+    <>
     <div className="of-scroll" ref={scrollRef}>
       <svg ref={svgRef} className="of-org" width={W} height={H} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label={`${props.ariaLabel}. Usa le frecce per spostarti tra persone e task, Invio per i dettagli.`} onKeyDown={onChartKey}>
+        <g aria-hidden="true">
+          {layout.boxes.map((b) => (
+            <g key={b.id} className="of-dept">
+              <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={16} />
+              <text x={b.x + DEPT_LABEL_INSET} y={b.y + DEPT_LABEL_Y}>
+                {b.name}
+                <tspan className="of-dept-n">{` · ${b.count}`}</tspan>
+              </text>
+            </g>
+          ))}
+        </g>
         <g aria-hidden="true">
           {layout.edges.map((e) => (
             <path key={e.key} d={e.d} className={`of-edge${e.dashed ? " of-dashed" : ""}`} />
@@ -381,8 +396,9 @@ export function OrgChart(props: OrgChartProps) {
           })}
         </g>
       </svg>
-      {avail > 0 && layout.width * scale > avail + 4 && <p className="of-scrollhint">Scorri di lato per vedere tutto l'organigramma</p>}
     </div>
+    {avail > 0 && layout.width * scale > avail + 4 && <p className="of-scrollhint">Scorri di lato per vedere tutto l'organigramma</p>}
+    </>
   );
 }
 

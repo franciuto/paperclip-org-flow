@@ -2,7 +2,19 @@
 
 Versioni di Org Flow. La versione che vede Paperclip è quella in `src/manifest.ts`.
 
-## [1.0.0] — non rilasciata (in sviluppo)
+## [1.1.0] — 2026-11-19
+
+### Cambiato
+
+- Pagina riorganizzata: intestazione compatta su una riga; organigramma a tutta pagina (largo quanto la pagina, alto quanto lo schermo, scalato per starci tutto; su telefono scorre di lato) con spaziature più ampie.
+- La scheda di dettaglio di task e persone scorre sopra il bordo destro dell'organigramma (su telefono sale dal basso); si chiude con × o Esc, il focus entra nella scheda e torna dov'era alla chiusura.
+- Task padre, riepilogo "Adesso", attività in diretta e "Chiusi di recente" sono sezioni a scomparsa sotto l'organigramma, ricordate nel browser, con "Comprimi tutto / Espandi tutto".
+
+### Aggiunto
+
+- Reparti: ogni reparto (sotto-albero di un riporto diretto del CEO) è racchiuso in un riquadro neutro con nome e numero di persone. Con un worker che non manda i reparti la pagina li ricava dalla catena di riporto ("Team di <nome>").
+
+## [1.0.0] — 2026-11-19
 
 Prima versione completa. Specifica in [docs/specifica.md](docs/specifica.md).
 

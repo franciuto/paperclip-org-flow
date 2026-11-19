@@ -20,7 +20,7 @@ Il prototipo statico di riferimento è [`prototype/org-flow.src.html`](../protot
 
 | Slot | Export | Contenuto |
 | --- | --- | --- |
-| `page`, `routePath: "org-flow"` | `OrgFlowPage` | Pagina completa: striscia dei task padre, riepilogo, organigramma live, pannello dettaglio + attività |
+| `page`, `routePath: "org-flow"` | `OrgFlowPage` | Pagina completa: riga di intestazione compatta; organigramma live a tutta pagina con i reparti in riquadri e la scheda di dettaglio che scorre sopra il bordo destro (dal basso su telefono); sotto, sezioni a scomparsa: task padre, riepilogo "Adesso", attività (e "Chiusi di recente" nello stato tranquillo) |
 | `sidebar` | `OrgFlowSidebarLink` | Link "Org Flow" nella barra laterale |
 | `dashboardWidget` | `OrgFlowDashboardWidget` | Riquadro compatto: avanzamento dei padri, chi lavora, chi dorme, cosa aspetta il board |
 

@@ -19,6 +19,8 @@ const DARK_VARS = `
   --of-warn: oklch(80% .15 75);
   --of-crit: oklch(71% .18 25);
   --of-bubble: oklch(30% 0 0);
+  --of-dept-bg: color-mix(in oklch, var(--of-fg) 8%, var(--of-card));
+  --of-dept-border: color-mix(in oklch, var(--of-fg) 17%, var(--of-card));
   --of-shadow: 0 1px 2px oklch(0% 0 0 / .4);
 `;
 
@@ -45,6 +47,8 @@ export const CSS = `
   --of-font: var(--font-sans, "InterVariable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
   --of-mono: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace);
   --of-r: 10px;
+  --of-dept-bg: color-mix(in oklch, var(--of-fg) 5%, var(--of-card));
+  --of-dept-border: color-mix(in oklch, var(--of-fg) 12%, var(--of-card));
   color: var(--of-fg);
   font-family: var(--of-font);
   font-size: 14px;
@@ -143,11 +147,34 @@ export const CSS = `
 @media (max-width:640px){.of-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.of-kpi:nth-child(2){border-right:0}.of-kpi:nth-child(-n+2){border-bottom:1px solid var(--of-border)}}
 
 /* main */
-.of-main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
-@media (max-width:1000px){.of-main{grid-template-columns:minmax(0,1fr)}}
-.of-stage{border:1px solid var(--of-border);border-radius:var(--of-r);background:var(--of-card);min-width:0;overflow:hidden}
-.of-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding:6px 0}
-.of-org{display:block;margin:0 auto;max-width:none}
+/* full-page layout: compact header, chart filling the viewport, drawer over it, sections below */
+.of-page.of-full{max-width:none;padding:14px 16px 32px;gap:12px}
+@media (min-width:720px){.of-page.of-full{padding:16px 24px 40px}}
+.of-head{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;min-height:34px}
+@media (min-width:720px){.of-head{flex-wrap:nowrap}.of-head > *{flex:none}}
+.of-head .of-h1{font-size:20px}
+.of-stage{position:relative;display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:480px;border:1px solid var(--of-border);border-radius:var(--of-r);background:var(--of-card);min-width:0;overflow:hidden}
+.of-scroll{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;padding:4px}
+.of-org{display:block;margin:auto;max-width:none;flex:none}
+.of-stage .of-legend{flex:none}
+.of-drawer{position:absolute;top:0;right:0;bottom:0;width:min(380px,100%);background:var(--of-card);border-left:1px solid var(--of-border);box-shadow:-10px 0 28px oklch(0% 0 0 / .1);overflow-y:auto;overscroll-behavior:contain;z-index:3;padding:10px 4px 16px;animation:of-drawer-in .22s ease-out;outline:none}
+.of-drawer .of-card{border:0;margin:0;background:transparent}
+@keyframes of-drawer-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes of-sheet-in{from{transform:translateY(32px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:640px){
+  .of-drawer{top:auto;left:0;width:auto;max-height:74%;border-left:0;border-top:1px solid var(--of-border);border-radius:16px 16px 0 0;box-shadow:0 -10px 28px oklch(0% 0 0 / .16);animation-name:of-sheet-in;padding-top:14px}
+  .of-drawer::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--of-edge)}
+}
+.of-sections{display:flex;flex-direction:column;gap:6px}
+.of-sec-tools{display:flex;justify-content:flex-end;margin-bottom:-4px}
+.of-sec-h{margin:0}
+.of-root .of-sec-h button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;padding:6px 2px;cursor:pointer;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--of-muted-fg);text-align:left;border-radius:6px}
+.of-root .of-sec-h button:hover{color:var(--of-fg)}
+.of-sec-h .of-count{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:400}
+.of-chev{transition:transform .15s ease;flex:none}
+.of-open .of-chev{transform:rotate(90deg)}
+.of-sec-body{padding:2px 0 8px}
+.of-feedbox{border:1px solid var(--of-border);border-radius:var(--of-r);background:var(--of-card);max-height:520px;overflow-y:auto;padding-top:6px}
 .of-scrollhint{position:sticky;left:0;margin:0;padding:2px 14px 4px;font-size:11.5px;color:var(--of-muted-fg);width:fit-content}
 .of-legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:1px solid var(--of-border);font-size:12px;color:var(--of-muted-fg);align-items:center}
 .of-legend svg{width:12px;height:12px;vertical-align:-2px;margin-right:5px}
@@ -156,6 +183,10 @@ export const CSS = `
 
 /* svg: org */
 .of-edge{fill:none;stroke:var(--of-edge);stroke-width:1.3}
+/* departments: neutral solid boxes (colour is reserved for parent-task groups) */
+.of-dept rect{fill:var(--of-dept-bg);stroke:var(--of-dept-border);stroke-width:1}
+.of-dept text{fill:var(--of-muted-fg);font-family:var(--of-font);font-size:10.5px;font-weight:650;letter-spacing:.08em}
+.of-dept .of-dept-n{font-weight:500;letter-spacing:0}
 .of-edge.of-dashed{stroke-dasharray:4 4}
 .of-nm{fill:var(--of-fg);font-size:12.5px;font-weight:600;font-family:var(--of-font)}
 .of-stl{font-size:10.5px;font-family:var(--of-font);fill:var(--of-muted-fg)}
@@ -247,9 +278,6 @@ export const CSS = `
 .of-fly text{fill:var(--of-fg);font-size:9.5px;font-family:var(--of-mono);font-weight:700}
 
 /* panel */
-.of-panel{border:1px solid var(--of-border);border-radius:var(--of-r);background:var(--of-card);display:flex;flex-direction:column;min-width:0;max-height:min(940px, calc(100vh - 120px))}
-@media (max-width:1000px){.of-panel{max-height:none}.of-feed{max-height:460px}}
-.of-panel > header{padding:12px 14px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .of-count{font-size:12px;color:var(--of-muted-fg);font-variant-numeric:tabular-nums}
 .of-card{margin:12px 12px 4px;border:1px solid var(--of-border);border-radius:9px;background:var(--of-bg);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .of-card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
@@ -341,7 +369,8 @@ export const CSS = `
   .of-bob,.of-zzz text,.of-typing circle,.of-thought circle.of-d,.of-spark path,.of-bang,.of-huh,.of-chip .of-in,.of-conn i{animation:none!important}
   .of-zzz text{opacity:.8}
   .of-feed li.of-new > button{animation:none}
-  .of-bar i,.of-cfill,.of-node-wrap,.of-pcard{transition:none}
+  .of-bar i,.of-cfill,.of-node-wrap,.of-pcard,.of-chev{transition:none}
+  .of-drawer{animation:none}
 }
 `;
 

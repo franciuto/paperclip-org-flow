@@ -11,7 +11,7 @@ describe("manifest", () => {
   });
 
   it("declares version, slots, tool and settings", () => {
-    expect(manifest.version).toBe("1.0.0");
+    expect(manifest.version).toBe("1.1.0");
     const slots = manifest.ui?.slots ?? [];
     expect(slots.map((s) => [s.type, s.exportName])).toEqual([
       ["page", "OrgFlowPage"],

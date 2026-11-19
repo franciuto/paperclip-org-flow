@@ -124,7 +124,6 @@ export function QuietStrip(props: {
         </span>
       </div>
       <div className="of-closed">
-        <h2 className="of-h2">Chiusi di recente</h2>
         {props.closed.length ? (
           <ul>
             {props.closed.map((t) => (
@@ -227,7 +226,7 @@ export function TaskCard(props: {
           {t.bounces > 0 && <span className="of-pill">Rimandato {t.bounces}×</span>}
           {t.priority && t.priority !== "medium" && <span className="of-pill">Priorità {priorityLabel(t.priority)}</span>}
         </div>
-        <button className="of-x" type="button" onClick={props.onClose} aria-label="Chiudi il dettaglio">×</button>
+        <button className="of-x" type="button" onClick={props.onClose} aria-label="Chiudi il dettaglio (Esc)" data-autofocus>×</button>
       </div>
       <h3><a {...nav.linkProps(issuePath(t))}>{t.title}</a></h3>
       {group && group.id !== "standalone" ? (
@@ -318,7 +317,7 @@ export function PersonCard(props: {
             <div className="of-meta"><b>{p.stateLabel}</b></div>
           </div>
         </div>
-        <button className="of-x" type="button" onClick={props.onClose} aria-label="Chiudi il dettaglio">×</button>
+        <button className="of-x" type="button" onClick={props.onClose} aria-label="Chiudi il dettaglio (Esc)" data-autofocus>×</button>
       </div>
       <div className="of-stats">
         <div><b>{held.length}</b><span>in mano</span></div>

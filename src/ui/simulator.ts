@@ -9,6 +9,7 @@
  * `stepSimulation` mutates the state in place and returns the new records.
  */
 import type {
+  DepartmentView,
   FeedRecord,
   GroupView,
   OrgFlowSettings,
@@ -18,7 +19,7 @@ import type {
   TaskView,
   VisualState,
 } from "../shared/types.js";
-import { effectiveParents } from "./layout.js";
+import { deriveDepartments, effectiveParents } from "./layout.js";
 
 export const TICK_SIM_MS = 60_000;
 export const SIM_SLEEP_AFTER_TICKS = 5;
@@ -87,6 +88,7 @@ export interface SimState {
   startMs: number;
   settings: OrgFlowSettings;
   companyId: string;
+  departments: DepartmentView[];
   people: PersonView[];
   boardId: string;
   routes: Record<string, string[]>;
@@ -120,7 +122,7 @@ function party(s: SimState, id: string | null): Party {
 }
 
 /* ---------------- setup ---------------- */
-export function createSimulation(base: Pick<Snapshot, "people" | "settings" | "companyId">, opts: { seed?: number; nowMs: number }): SimState {
+export function createSimulation(base: Pick<Snapshot, "people" | "settings" | "companyId" | "departments">, opts: { seed?: number; nowMs: number }): SimState {
   const people = base.people.map((p) => ({ ...p }));
   let board = people.find((p) => p.kind === "user");
   if (!board) {
@@ -152,6 +154,8 @@ export function createSimulation(base: Pick<Snapshot, "people" | "settings" | "c
     startMs: Math.floor(opts.nowMs / TICK_SIM_MS) * TICK_SIM_MS,
     settings: base.settings,
     companyId: base.companyId,
+    // Real departments (or derived from the chain of command, like an older worker would need)
+    departments: base.departments ?? deriveDepartments(people),
     people,
     boardId: board.id,
     routes,
@@ -449,6 +453,7 @@ export function simulationSnapshot(s: SimState): Snapshot {
     groups,
     feed: s.feed.slice(),
     settings: s.settings,
+    departments: s.departments,
     counts: {
       working: people.filter((p) => p.state === "working").length,
       thinking: people.filter((p) => p.state === "thinking").length,

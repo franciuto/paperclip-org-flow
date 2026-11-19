@@ -8,17 +8,16 @@ Gira sull'istanza Paperclip di `ai-pi` (`https://agents.franciuto.com`). Chiave 
 
 ## Cosa fa
 
-- **Pagina `/<prefisso>/org-flow`** (in produzione `https://agents.franciuto.com/FRA/org-flow`), con link "Org Flow" nella barra laterale:
-  - striscia dei task padre con avanzamento (figli chiusi / figli totali) e chi ci sta lavorando;
-  - riepilogo: quanti agenti lavorano, rivedono, dormono, quanti task aspettano il board;
-  - organigramma con i personaggi di Paperclip nella posa del loro stato (al lavoro, revisiona, ha ricevuto, ha chiuso, confuso, dorme, in pausa) e sotto ognuno i task in mano, con stato e percentuale;
+- **Pagina `/<prefisso>/org-flow`** (in produzione `https://agents.franciuto.com/FRA/org-flow`), con link "Org Flow" nella barra laterale. In alto una riga compatta (titolo, indicatore "Live", ora, "Verifica connessione", interruttore "Simulazione"), poi:
+  - l'**organigramma a tutta pagina**, largo quanto la pagina e alto quanto lo schermo, scalato per starci tutto (su telefono scorre di lato): i personaggi di Paperclip nella posa del loro stato (al lavoro, revisiona, ha ricevuto, ha chiuso, confuso, dorme, in pausa) e sotto ognuno i task in mano, con stato e percentuale;
+  - ogni **reparto** (il sotto-albero di ciascun riporto diretto del CEO, per esempio Grafica o IT e infrastruttura) è racchiuso in un riquadro neutro con il nome e il numero di persone; il colore resta riservato ai task padre;
   - quando un task passa di mano il chip vola dal vecchio al nuovo assegnatario;
-  - scheda di dettaglio di un task (percentuale e sua fonte, percorso tra le persone con i tempi, rimbalzi) e di una persona (task in mano, statistiche delle 24 ore);
-  - feed "Attività in diretta", con il pulsante "Verifica connessione" che manda un evento di prova dal worker alla pagina;
+  - clic su un task o una persona: la **scheda di dettaglio** scorre sopra il bordo destro dell'organigramma (su telefono sale dal basso); si chiude con × o Esc. Task: percentuale e sua fonte, percorso tra le persone con i tempi, rimbalzi. Persona: task in mano, statistiche delle 24 ore;
+  - sotto l'organigramma, **sezioni a scomparsa** (si ricordano aperte o chiuse nel browser, con "Comprimi tutto / Espandi tutto"): task padre con avanzamento (figli chiusi / figli totali) e chi ci sta lavorando; "Adesso" (quanti agenti lavorano, rivedono, dormono, quanti task aspettano il board); "Attività in diretta";
   - i task in mano a qualcuno che non è nell'organigramma (per esempio un agente appena creato) finiscono nel nodo "Altri" invece di sparire;
   - organigramma navigabile da tastiera: un solo punto di tabulazione, frecce, Home e Fine per muoversi tra persone e task;
-  - stato tranquillo quando non ci sono task aperti, con i task chiusi di recente;
-  - modalità **Simulazione** con persone vere e task finti, per vedere la pagina animata; non scrive nulla su Paperclip.
+  - stato tranquillo quando non ci sono task aperti, con la sezione "Chiusi di recente";
+  - modalità **Simulazione** con persone vere e task finti, per vedere la pagina animata; non scrive nulla su Paperclip (il banner resta sopra l'organigramma).
 - **Riquadro per la Dashboard** di Paperclip: avanzamento dei padri, chi lavora, chi dorme, cosa aspetta il board.
 - **Strumento `report_progress`** per gli agenti, che possono dichiarare la percentuale dei loro task. Le istruzioni degli agenti non sono state modificate: adottarlo è una scelta del proprietario.
 - Tema chiaro e scuro di Paperclip, usabile da telefono, rispetta `prefers-reduced-motion`.

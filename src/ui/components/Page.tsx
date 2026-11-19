@@ -4,7 +4,7 @@ import { ACTION_PING, STANDALONE_COLOR, type FeedRecord, type Party, type Person
 import { chipWidthFor } from "../chips.js";
 import { clockTime, relativeTime, taskCode } from "../format.js";
 import { useNow, usePrefersReducedMotion, useSimulation } from "../hooks.js";
-import { layoutOrg } from "../layout.js";
+import { deriveDepartments, layoutOrg } from "../layout.js";
 import { announce, flushAnnouncer, type Announcer } from "../poll.js";
 import { activeGroups, bucketUnknownHolders, CONNECTION_LABEL, displayLabel, OTHERS_ID, heldByPerson, isOpenTask, liveCounts, mergeFeed, recentlyClosed, sortGroups, touchedBy } from "../model.js";
 import {
@@ -25,6 +25,7 @@ import {
 import { useStyles } from "../styles.js";
 import { useLiveOrgFlow } from "../useLive.js";
 import { OrgChart, StatusGlyph, type Selection } from "./OrgChart.js";
+import { Drawer, Section, useFillHeight, useSections } from "./Layout.js";
 import { ActivityFeed, KpiStrip, ParentStrip, PersonCard, QuietStrip, TaskCard, type FeedContext } from "./Panels.js";
 
 const FRESH_MS = 2600;
@@ -234,9 +235,17 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
   const hidden = useMemo(() => new Set(flights.map((f) => f.taskId)), [flights]);
   const held = useMemo(() => heldByPerson(tasks, groupOrder, hidden), [tasks, groupOrder, hidden]);
   const chipW = useMemo(() => chipWidthFor(tasks.filter(isOpenTask).map(taskCode)), [tasks]);
-  const layoutKey = people.map((p) => `${p.id}|${p.kind}|${p.reportsTo ?? ""}|${p.name}|${held.get(p.id)?.length ?? 0}`).join("\n") + `#${chipW}`;
+  // Departments from the worker; older workers don't send them: derive from the chain of command.
+  const departments = useMemo(
+    () => base?.departments ?? deriveDepartments(people.filter((p) => p.id !== OTHERS_ID)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [base?.departments, people.map((p) => `${p.id}>${p.reportsTo ?? ""}`).join(",")],
+  );
+  const layoutKey =
+    people.map((p) => `${p.id}|${p.kind}|${p.reportsTo ?? ""}|${p.name}|${held.get(p.id)?.length ?? 0}`).join("\n") +
+    `#${chipW}#` + departments.map((d) => `${d.leadId}:${d.name}:${d.memberIds.length}`).join(",");
   const layout = useMemo(
-    () => layoutOrg(people.map((p) => ({ id: p.id, kind: p.kind, reportsTo: p.reportsTo, name: p.name, chipCount: held.get(p.id)?.length ?? 0, detached: p.id === OTHERS_ID })), chipW),
+    () => layoutOrg(people.map((p) => ({ id: p.id, kind: p.kind, reportsTo: p.reportsTo, name: p.name, chipCount: held.get(p.id)?.length ?? 0, detached: p.id === OTHERS_ID })), chipW, departments),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [layoutKey],
   );
@@ -272,6 +281,10 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
 
   const conn = simOn ? { cls: "of-sim", text: "Simulazione" } : { cls: live.connection === "live" ? "" : live.connection === "connecting" ? "of-connecting" : "of-offline", text: CONNECTION_LABEL[live.connection] };
 
+  const stageRef = useRef<HTMLElement>(null);
+  const stageHeight = useFillHeight(stageRef, !!base);
+  const sections = useSections();
+
   /* ---------- states without data ---------- */
   if (!companyId) {
     return (
@@ -297,28 +310,29 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
   const strip = activeGroups(groups);
   const showSim = base.settings?.enableSimulation || simOn;
 
+  const sectionIds = ["parents", "kpi", "feed"];
+  const allOpen = sectionIds.every((id) => sections.isOpen(id));
+  const closeDetail = () => setSel(null);
+
   return (
     <div className="of-root">
       {live.streamTap}
       <div className="of-sr" role="status" aria-live="polite" aria-atomic="true">{announcement}</div>
-      <div className="of-page">
-        <header>
-          <div className="of-titlerow">
-            <h1 className="of-h1">Org Flow</h1>
-            <span className={`of-conn ${conn.cls}`} title={live.lastOkAt && !simOn ? `Ultimo aggiornamento ${relativeTime(new Date(live.lastOkAt).toISOString(), nowMs)}` : undefined}>
-              <i aria-hidden="true" />{conn.text}
-            </span>
-            {!simOn && <PingButton companyId={companyId} />}
-            <span className="of-clock" aria-label={`Ora ${clockTime(displayNow)}`}>{clockTime(displayNow)}</span>
-            <div className="of-controls">
-              {showSim && (
-                <button type="button" className="of-btn" aria-pressed={simOn} onClick={() => setSimOn((v) => !v)}>
-                  <span className="of-switch" aria-hidden="true" />Simulazione
-                </button>
-              )}
-            </div>
+      <div className="of-page of-full">
+        <header className="of-head">
+          <h1 className="of-h1" title="Chi sta facendo cosa in questo momento, a che punto è ogni task e come passa da una persona all'altra. I colori sono i task padre.">Org Flow</h1>
+          <span className={`of-conn ${conn.cls}`} title={live.lastOkAt && !simOn ? `Ultimo aggiornamento ${relativeTime(new Date(live.lastOkAt).toISOString(), nowMs)}` : undefined}>
+            <i aria-hidden="true" />{conn.text}
+          </span>
+          <span className="of-clock" aria-label={`Ora ${clockTime(displayNow)}`}>{clockTime(displayNow)}</span>
+          {!simOn && <PingButton companyId={companyId} />}
+          <div className="of-controls">
+            {showSim && (
+              <button type="button" className="of-btn" aria-pressed={simOn} onClick={() => setSimOn((v) => !v)}>
+                <span className="of-switch" aria-hidden="true" />Simulazione
+              </button>
+            )}
           </div>
-          <p className="of-sub">Chi sta facendo cosa in questo momento, a che punto è ogni task e come passa da una persona all'altra. I colori sono i task padre.</p>
         </header>
 
         {simOn && (
@@ -328,49 +342,44 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
           </div>
         )}
 
-        {strip.length ? (
-          <ParentStrip groups={strip} people={personById} focusGroup={focusGroup} openByGroup={openByGroup} onFocus={setFocusGroup} />
-        ) : (
-          <QuietStrip people={people} closed={recentlyClosed(tasks)} groupColor={colorOf} nowMs={displayNow} onSelect={select} />
-        )}
-
-        <KpiStrip people={people} counts={counts} onWaiting={users.length ? () => setSel({ type: "person", id: users[0]!.id }) : undefined} />
-
-        <div className="of-main">
-          <section className="of-stage" aria-label="Organigramma con i task">
-            {people.length ? (
-              <OrgChart
-                people={people}
-                held={held}
-                groupColor={colorOf}
-                groupTitle={titleOf}
-                layout={layout}
-                chipW={chipW}
-                selected={sel}
-                focusGroup={focusGroup}
-                touched={touched}
-                touchColor={selTask ? colorOf(selTask.groupId) : null}
-                flights={flights}
-                onFlightDone={onFlightDone}
-                onSelect={select}
-                ariaLabel="Organigramma della company con i task in mano a ciascuno"
-              />
-            ) : (
-              <p className="of-feed-empty" style={{ padding: 20 }}>Nessun agente in questa company.</p>
-            )}
-            <div className="of-legend">
-              {(["todo", "in_progress", "in_review", "blocked"] as const).map((s) => (
-                <span key={s}>
-                  <svg viewBox="-6 -6 12 12" aria-hidden="true"><StatusGlyph status={s} /></svg>
-                  {({ todo: "Da fare", in_progress: "In corso", in_review: "In revisione", blocked: "Bloccato" } as const)[s]}
-                </span>
-              ))}
-              <span>Il riempimento è la percentuale di completamento</span>
-              <span className="of-hint">Clicca una persona o un task per i dettagli</span>
-            </div>
-          </section>
-
-          <aside className="of-panel" aria-label="Dettaglio e attività">
+        <section
+          className="of-stage"
+          aria-label="Organigramma con i task"
+          ref={stageRef}
+          style={stageHeight ? { height: stageHeight } : undefined}
+          onKeyDown={(ev) => { if (ev.key === "Escape" && sel) { ev.preventDefault(); closeDetail(); } }}
+        >
+          {people.length ? (
+            <OrgChart
+              people={people}
+              held={held}
+              groupColor={colorOf}
+              groupTitle={titleOf}
+              layout={layout}
+              chipW={chipW}
+              selected={sel}
+              focusGroup={focusGroup}
+              touched={touched}
+              touchColor={selTask ? colorOf(selTask.groupId) : null}
+              flights={flights}
+              onFlightDone={onFlightDone}
+              onSelect={select}
+              ariaLabel="Organigramma della company con i task in mano a ciascuno"
+            />
+          ) : (
+            <p className="of-feed-empty" style={{ padding: 20 }}>Nessun agente in questa company.</p>
+          )}
+          <div className="of-legend">
+            {(["todo", "in_progress", "in_review", "blocked"] as const).map((s) => (
+              <span key={s}>
+                <svg viewBox="-6 -6 12 12" aria-hidden="true"><StatusGlyph status={s} /></svg>
+                {({ todo: "Da fare", in_progress: "In corso", in_review: "In revisione", blocked: "Bloccato" } as const)[s]}
+              </span>
+            ))}
+            <span>Il riempimento è la percentuale di completamento</span>
+            <span className="of-hint">Clicca una persona o un task per i dettagli</span>
+          </div>
+          <Drawer open={!!(selTask || selPerson)} label={selTask ? `Dettaglio del task ${taskCode(selTask)}` : `Dettaglio di ${selPerson?.name ?? ""}`} onClose={closeDetail}>
             {selTask && (
               <TaskCard
                 task={selTask}
@@ -379,7 +388,7 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
                 people={personById}
                 nowMs={displayNow}
                 nav={nav}
-                onClose={() => setSel(null)}
+                onClose={closeDetail}
                 onSelect={select}
               />
             )}
@@ -391,16 +400,36 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
                 groupOrder={groupOrder}
                 groupColor={colorOf}
                 nav={nav}
-                onClose={() => setSel(null)}
+                onClose={closeDetail}
                 onSelect={select}
               />
             )}
-            <header>
-              <h2 className="of-h2">Attività in diretta</h2>
-              <span className="of-count">{feed.length === 1 ? "1 evento" : `${feed.length} eventi`}</span>
-            </header>
-            <ActivityFeed records={feed} ctx={feedCtx} freshIds={fresh} selectedTaskId={selTask?.id ?? null} nowMs={displayNow} taskIdOf={taskIdOf} onSelect={select} />
-          </aside>
+          </Drawer>
+        </section>
+
+        <div className="of-sections">
+          <div className="of-sec-tools">
+            <button type="button" className="of-mini" onClick={() => sections.setAll(sectionIds, !allOpen)}>
+              {allOpen ? "Comprimi tutto" : "Espandi tutto"}
+            </button>
+          </div>
+          {strip.length ? (
+            <Section id="parents" title="Task padre" meta={strip.length} open={sections.isOpen("parents")} onToggle={() => sections.toggle("parents")}>
+              <ParentStrip groups={strip} people={personById} focusGroup={focusGroup} openByGroup={openByGroup} onFocus={setFocusGroup} />
+            </Section>
+          ) : (
+            <Section id="parents" title="Chiusi di recente" open={sections.isOpen("parents")} onToggle={() => sections.toggle("parents")}>
+              <QuietStrip people={people} closed={recentlyClosed(tasks)} groupColor={colorOf} nowMs={displayNow} onSelect={select} />
+            </Section>
+          )}
+          <Section id="kpi" title="Adesso" open={sections.isOpen("kpi")} onToggle={() => sections.toggle("kpi")}>
+            <KpiStrip people={people} counts={counts} onWaiting={users.length ? () => setSel({ type: "person", id: users[0]!.id }) : undefined} />
+          </Section>
+          <Section id="feed" title="Attività in diretta" meta={feed.length === 1 ? "1 evento" : `${feed.length} eventi`} open={sections.isOpen("feed")} onToggle={() => sections.toggle("feed")}>
+            <div className="of-feedbox">
+              <ActivityFeed records={feed} ctx={feedCtx} freshIds={fresh} selectedTaskId={selTask?.id ?? null} nowMs={displayNow} taskIdOf={taskIdOf} onSelect={select} />
+            </div>
+          </Section>
         </div>
       </div>
     </div>

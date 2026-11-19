@@ -80,3 +80,16 @@ if (qs.get("ping") === "1") {
     Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.includes("Verifica connessione"))?.click();
   }, 1500);
 }
+// Short chart box so the sections below fit in a screenshot: ?compact=1
+if (qs.get("compact") === "1") {
+  const st = document.createElement("style");
+  st.textContent = ".of-stage{height:560px!important}";
+  document.head.appendChild(st);
+}
+// Collapse one section first: ?collapse=kpi
+const collapse = qs.get("collapse");
+if (collapse) {
+  setTimeout(() => {
+    Array.from(document.querySelectorAll(".of-sec-h button")).find((b) => b.getAttribute("aria-controls") === `of-sec-${collapse}`)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  }, 1200);
+}

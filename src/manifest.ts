@@ -5,7 +5,7 @@ import { REPORT_PROGRESS_TOOL } from "./worker/tool.js";
 const manifest: PaperclipPluginManifestV1 = {
   id: "franciuto.org-flow",
   apiVersion: 1,
-  version: "1.0.0",
+  version: "1.1.0",
   displayName: "Org Flow",
   description:
     "Organigramma live della company: chi sta lavorando a cosa, avanzamento dei task raggruppati per task padre, passaggi di mano animati e feed di attività. Include lo strumento report_progress per gli agenti.",
