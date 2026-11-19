@@ -4,14 +4,14 @@ import { isSelfOrSubordinate, parseReportProgressParams } from "../src/worker/to
 
 describe("settings", () => {
   it("applies defaults", () => {
-    expect(resolveSettings({})).toEqual({ sleepAfterMinutes: 15, keepClosedHours: 24, enableSimulation: true });
-    expect(resolveSettings(null)).toEqual({ sleepAfterMinutes: 15, keepClosedHours: 24, enableSimulation: true });
+    expect(resolveSettings({})).toEqual({ sleepAfterMinutes: 15, keepClosedHours: 24, enableSimulation: true, departmentNames: [] });
+    expect(resolveSettings(null)).toEqual({ sleepAfterMinutes: 15, keepClosedHours: 24, enableSimulation: true, departmentNames: [] });
   });
   it("reads, clamps and falls back on invalid values", () => {
     expect(resolveSettings({ sleepAfterMinutes: 30, keepClosedHours: 0, enableSimulation: false }))
-      .toEqual({ sleepAfterMinutes: 30, keepClosedHours: 0, enableSimulation: false });
+      .toEqual({ sleepAfterMinutes: 30, keepClosedHours: 0, enableSimulation: false, departmentNames: [] });
     expect(resolveSettings({ sleepAfterMinutes: "abc", keepClosedHours: 99999, enableSimulation: "yes" }))
-      .toEqual({ sleepAfterMinutes: 15, keepClosedHours: 720, enableSimulation: true });
+      .toEqual({ sleepAfterMinutes: 15, keepClosedHours: 720, enableSimulation: true, departmentNames: [] });
     expect(resolveSettings({ sleepAfterMinutes: "20" }).sleepAfterMinutes).toBe(20);
   });
   it("validates with Italian messages", () => {

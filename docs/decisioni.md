@@ -45,3 +45,7 @@ Registro delle scelte prese durante lo sviluppo, con il motivo. Le più recenti 
 **Etichette di stato calcolate dal worker.** Il worker produce `stateLabel` in italiano insieme allo stato, così pagina, widget e test vedono lo stesso testo; la UI sovrascrive l'etichetta solo durante i flash locali.
 
 **Produzione dal submodule, non dalla cartella di sviluppo.** Paperclip ricarica un plugin installato con `--local` quando cambia la sua cartella. Installare la produzione da `~/workdir/Repos/org-flow` porterebbe in produzione ogni build di prova; la produzione si installa da `~/ai-final-boss/paperclip-plugins/org-flow`. Al 2026-11-19 la 0.1.0 risulta ancora installata da `/home/franciuto/workdir/Repos/paperclip-org-flow/paperclip-plugin-org-flow`: il passaggio al submodule è descritto in [installazione.md](installazione.md#prima-installazione).
+
+## 2026-11-19 — reparti nell'organigramma
+
+**Reparti ricavati dalla catena di riporto.** Paperclip non ha il concetto di reparto e l'utente voleva i nomi dei reparti sull'organigramma. Il worker considera reparto il sottoalbero sotto ogni riporto diretto di un vertice: con l'organigramma attuale coincide con i gruppi reali (Grafica, Comunicazione, IT e infrastruttura, Libreria) senza configurare nulla. Il nome si ricava dal titolo e dal ruolo del responsabile, perché nei titoli di Paperclip c'è già il mestiere ("Graphic Team Lead", "CIO"); l'impostazione `departmentNames` permette di sostituirlo quando la deduzione sbaglia. I vertici restano fuori dai reparti, perché guidano tutta la company.

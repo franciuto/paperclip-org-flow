@@ -82,7 +82,7 @@ describe("org-flow worker", () => {
     expect(group).toMatchObject({ title: "Newsletter di dicembre", childrenTotal: 2, childrenDone: 1, progress: 50 });
     expect(s.tasks.find((t) => t.id === "orphan")).toMatchObject({ groupId: "standalone", parentId: null });
     expect(s.tasks.find((t) => t.id === "p1")).toMatchObject({ groupId: "p1", progressSource: "children" });
-    expect(s.settings).toEqual({ sleepAfterMinutes: 15, keepClosedHours: 24, enableSimulation: true });
+    expect(s.settings).toEqual({ sleepAfterMinutes: 15, keepClosedHours: 24, enableSimulation: true, departmentNames: [] });
   });
 
   it("returns null / empty pages without a company", async () => {
@@ -400,7 +400,7 @@ describe("org-flow worker — settings and plan checklist", () => {
     await harness.ctx.issues.documents.upsert({ issueId: "t1", key: "plan", companyId: CO, body: "- [x] uno\n- [ ] due\n- [x] tre\n- [x] quattro" });
     await plugin.definition.setup(harness.ctx);
     const s = await harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
-    expect(s.settings).toEqual({ sleepAfterMinutes: 5, keepClosedHours: 2, enableSimulation: false });
+    expect(s.settings).toEqual({ sleepAfterMinutes: 5, keepClosedHours: 2, enableSimulation: false, departmentNames: [] });
     expect(s.tasks.map((t) => t.id)).toEqual(["t1"]);
     expect(s.tasks[0]).toMatchObject({ progress: 75, progressSource: "checklist" });
     expect(s.counts.closed24h).toBe(1);

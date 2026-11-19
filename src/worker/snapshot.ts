@@ -8,6 +8,7 @@ import type {
 } from "../shared/types.js";
 import { STANDALONE_COLOR, STANDALONE_GROUP_ID } from "../shared/types.js";
 import { colorForGroup } from "./colors.js";
+import { computeDepartments } from "./departments.js";
 import { bouncesByIssue, holderSequences, journeyFor, personSignals, type HistoryEntry } from "./history.js";
 import { computePresence, type PresenceSignal, type PresenceTask } from "./presence.js";
 import {
@@ -292,6 +293,10 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
   const holders = new Set(tasks.map((t) => t.holderId).filter((h): h is string => !!h));
   const agents = base.agents.filter((a) => a.status !== "terminated" || holders.has(a.id));
   const agentIds = new Set(agents.map((a) => a.id));
+  const { departments, departmentOf } = computeDepartments(
+    agents.filter((a) => a.status !== "terminated"),
+    settings.departmentNames ?? [],
+  );
   const userIds = [...holders].filter((h) => h.startsWith("user:")).sort();
 
   const signals = personSignals(input.history, now, managerOf);
@@ -353,6 +358,7 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
     }, now, settings.sleepAfterMinutes);
     people.push({
       id: a.id,
+      departmentId: departmentOf.get(a.id) ?? null,
       kind: "agent",
       name: a.name,
       title: a.title,
@@ -377,6 +383,7 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
     }, now, settings.sleepAfterMinutes);
     people.push({
       id: uid,
+      departmentId: null,
       kind: "user",
       name: index === 0 ? "Board" : `Board ${index + 1}`,
       title: null,
@@ -403,6 +410,7 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
     groups,
     feed: input.feed.slice(0, FEED_IN_SNAPSHOT),
     settings,
+    departments,
     counts: {
       working: countState("working"),
       thinking: countState("thinking"),

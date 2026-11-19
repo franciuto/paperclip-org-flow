@@ -86,6 +86,7 @@ Le regole esatte sono in [stati-e-percentuali.md](stati-e-percentuali.md). Le po
 | Campo | Tipo | Significato |
 | --- | --- | --- |
 | `id` | string | UUID dell'agente o `user:<userId>` |
+| `departmentId` | string \| null (facoltativo) | reparto della persona (`DepartmentView.id`); `null` per i vertici, gli utenti e gli agenti terminati |
 | `kind` | `"agent"` \| `"user"` | |
 | `name` | string | nome dell'agente; per gli utenti `"Board"`, `"Board 2"`, … in ordine di id |
 | `title` | string \| null | titolo dell'agente in Paperclip |
@@ -163,8 +164,22 @@ Il worker ordina i gruppi (aperti prima, poi per aggiornamento recente, `standal
 | `sleepAfterMinutes` | integer | 15 | 1–1440 |
 | `keepClosedHours` | integer | 24 | 0–720 |
 | `enableSimulation` | boolean | true | |
+| `departmentNames` | `Array<{ lead, name }>` (facoltativo) | `[]` | `lead` e `name` non vuoti, `name` al massimo 60 caratteri |
 
 Dettagli in [installazione.md](installazione.md#impostazioni).
+
+### `DepartmentView`
+
+Paperclip non ha reparti: il worker li ricava dalla catena di riporto (`src/worker/departments.ts`). Un reparto è il sottoalbero sotto ogni riporto diretto di un vertice (un agente senza responsabile, come il CEO; se i vertici sono più d'uno, ognuno apre i suoi reparti). Gli agenti con responsabile mancante o in un ciclo di riporto contano come vertici. I vertici, gli utenti e gli agenti terminati non hanno reparto.
+
+| Campo | Tipo | Significato |
+| --- | --- | --- |
+| `id` | string | id del responsabile del reparto |
+| `name` | string | nome mostrato |
+| `leadId` | string | id del responsabile |
+| `memberIds` | string[] | responsabile e tutti i suoi sottoposti (solo agenti), dal responsabile in giù |
+
+Il nome viene, nell'ordine: dall'impostazione `departmentNames` (corrispondenza con l'id o il nome del responsabile, senza distinzione tra maiuscole e minuscole); da parole chiave del titolo del responsabile (per esempio `graphic`/`design` → "Grafica", `communication`/`marketing` → "Comunicazione", `CIO`/`CTO`/`IT`/`system`/`network`/`devops` → "IT e infrastruttura", `librarian`/`knowledge` → "Libreria", poi Amministrazione, Vendite, Sviluppo, Legale, Persone); dal ruolo (`designer`, `cmo`, `cto`, `devops`, `engineer`, `researcher`); altrimenti "Team di <nome>". Se due reparti hanno lo stesso nome, a entrambi si aggiunge " · <nome del responsabile>". Nell'istanza attuale: Grafica (Giulia, Martina, Sofia), Comunicazione (Iris), IT e infrastruttura (Jamal, Arold, Luke, Daniel), Libreria (Joe); Laura e il board non hanno reparto.
 
 ### `Snapshot`
 
@@ -177,6 +192,7 @@ Dettagli in [installazione.md](installazione.md#impostazioni).
 | `groups` | `GroupView[]` | un gruppo per ogni padre presente, più `standalone` |
 | `feed` | `FeedRecord[]` | dal più recente, massimo 100 |
 | `settings` | `OrgFlowSettings` | impostazioni in vigore |
+| `departments` | `DepartmentView[]` (facoltativo) | reparti ricavati dalla catena di riporto; assente nei worker precedenti |
 | `counts` | `{ working, thinking, sleepy, waiting, open, closed24h }` | persone per stato, task aperti, task chiusi nelle ultime 24 h |
 
 La pagina e il widget ricalcolano i contatori con `liveCounts` (`src/ui/model.ts`) per tenere conto degli effetti locali; di `counts` usano solo `closed24h`. Attenzione: in `counts.waiting` il worker conta le persone in stato `waiting`, `liveCounts` conta i task aperti in mano agli utenti.

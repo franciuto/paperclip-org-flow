@@ -156,6 +156,7 @@ Definite in `instanceConfigSchema` (`src/worker/settings.ts`). Il plugin le legg
 | `sleepAfterMinutes` | Minuti prima di "dorme" | intero | 15 | 1–1440 | un agente senza task aperti e senza attività da questo tempo è mostrato addormentato |
 | `keepClosedHours` | Ore di visibilità dei task chiusi | intero | 24 | 0–720 | per quante ore i task `done`/`cancelled` restano nell'organigramma e in "Chiusi di recente" |
 | `enableSimulation` | Mostra l'interruttore "Simulazione" | booleano | true | | mostra il pulsante "Simulazione" nella pagina |
+| `departmentNames` | Nomi dei reparti | elenco di `{ lead, name }` | `[]` | `name` max 60 caratteri | sostituisce il nome dedotto di un reparto; `lead` è il nome o l'id del responsabile, es. `[{ "lead": "Joe", "name": "Archivio" }]` (vedi [contratto-dati.md](contratto-dati.md#departmentview)) |
 
 Dove cambiarle:
 

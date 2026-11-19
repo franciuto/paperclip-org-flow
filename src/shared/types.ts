@@ -75,6 +75,8 @@ export const POSE_FOR_STATE: Record<VisualState, Pose> = {
 
 export interface PersonView {
   id: string;
+  /** Department this person belongs to (DepartmentView.id), null for the top of the org (CEO) and users. */
+  departmentId?: string | null;
   kind: "agent" | "user";
   name: string;
   title: string | null;
@@ -144,6 +146,20 @@ export interface OrgFlowSettings {
   sleepAfterMinutes: number;   // default 15
   keepClosedHours: number;     // closed tasks/groups stay visible this long, default 24
   enableSimulation: boolean;   // show the "Simulazione" toggle in the UI, default true
+  /** Optional department name overrides, matched by lead agent name or id. */
+  departmentNames?: Array<{ lead: string; name: string }>;
+}
+
+/**
+ * A department = the subtree under one direct report of a top-level agent (e.g. the CEO).
+ * Paperclip has no department concept: the worker derives it from reportsTo; the name comes from
+ * settings.departmentNames, else from the lead's title/role (Italian), else "Team di <nome>".
+ */
+export interface DepartmentView {
+  id: string;            // lead person id
+  name: string;
+  leadId: string;
+  memberIds: string[];   // lead + all descendants (agents only)
 }
 
 export interface Snapshot {
@@ -154,6 +170,8 @@ export interface Snapshot {
   groups: GroupView[];
   feed: FeedRecord[];          // newest first, max 100
   settings: OrgFlowSettings;
+  /** Departments (optional for compatibility with older workers). */
+  departments?: DepartmentView[];
   counts: { working: number; thinking: number; sleepy: number; waiting: number; open: number; closed24h: number };
 }
 
