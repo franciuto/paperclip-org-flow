@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Org Flow: the live org chart for Paperclip" width="720">
+  <img src="assets/banner.png" alt="Org Flow: the live org chart for Paperclip, drawn as an abstract org chart with departments, task chips and a handoff in flight" width="720">
 </p>
 
 <p align="center">
