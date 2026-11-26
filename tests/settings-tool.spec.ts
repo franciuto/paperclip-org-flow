@@ -25,24 +25,24 @@ describe("settings", () => {
 
 describe("parseReportProgressParams", () => {
   it("accepts valid input and trims the note", () => {
-    expect(parseReportProgressParams({ issue: " FRA-62 ", percent: 40, note: "  fatto il primo blocco " }))
-      .toEqual({ ok: true, value: { issue: "FRA-62", percent: 40, note: "fatto il primo blocco" } });
+    expect(parseReportProgressParams({ issue: " ACME-62 ", percent: 40, note: "  finished the first block " }))
+      .toEqual({ ok: true, value: { issue: "ACME-62", percent: 40, note: "finished the first block" } });
   });
   it("accepts numeric strings and rounds", () => {
-    expect(parseReportProgressParams({ issue: "FRA-1", percent: "55%" })).toMatchObject({ ok: true, value: { percent: 55 } });
-    expect(parseReportProgressParams({ issue: "FRA-1", percent: 33.6 })).toMatchObject({ ok: true, value: { percent: 34 } });
+    expect(parseReportProgressParams({ issue: "ACME-1", percent: "55%" })).toMatchObject({ ok: true, value: { percent: 55 } });
+    expect(parseReportProgressParams({ issue: "ACME-1", percent: 33.6 })).toMatchObject({ ok: true, value: { percent: 34 } });
   });
   it("rejects bad input with clear messages", () => {
     expect(parseReportProgressParams(null)).toMatchObject({ ok: false });
     expect(parseReportProgressParams({ percent: 10 })).toMatchObject({ ok: false });
-    expect(parseReportProgressParams({ issue: "FRA-1", percent: 101 })).toMatchObject({ ok: false });
-    expect(parseReportProgressParams({ issue: "FRA-1", percent: -1 })).toMatchObject({ ok: false });
-    expect(parseReportProgressParams({ issue: "FRA-1", percent: "tanto" })).toMatchObject({ ok: false });
-    expect(parseReportProgressParams({ issue: "FRA-1", percent: 10, note: 5 })).toMatchObject({ ok: false });
-    const long = parseReportProgressParams({ issue: "FRA-1", percent: 10, note: "x".repeat(201) });
+    expect(parseReportProgressParams({ issue: "ACME-1", percent: 101 })).toMatchObject({ ok: false });
+    expect(parseReportProgressParams({ issue: "ACME-1", percent: -1 })).toMatchObject({ ok: false });
+    expect(parseReportProgressParams({ issue: "ACME-1", percent: "tanto" })).toMatchObject({ ok: false });
+    expect(parseReportProgressParams({ issue: "ACME-1", percent: 10, note: 5 })).toMatchObject({ ok: false });
+    const long = parseReportProgressParams({ issue: "ACME-1", percent: 10, note: "x".repeat(201) });
     expect(long).toMatchObject({ ok: false });
     if (!long.ok) expect(long.error).toContain("200");
-    expect(parseReportProgressParams({ issue: "FRA-1", percent: 10, note: "x".repeat(200) }).ok).toBe(true);
+    expect(parseReportProgressParams({ issue: "ACME-1", percent: 10, note: "x".repeat(200) }).ok).toBe(true);
   });
 });
 

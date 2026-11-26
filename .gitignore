@@ -1,6 +1,25 @@
+# Build output
 node_modules/
 dist/
 coverage/
-*.log
-.DS_Store
+
+# Screenshots from the visual test bench
 tests/ui/out/
+
+# Secrets and local config
+.env
+*.log
+
+# Claude Code personal settings
+.claude/settings.local.json
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

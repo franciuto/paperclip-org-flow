@@ -109,13 +109,13 @@ describe("rovingNext", () => {
 });
 
 describe("bucketUnknownHolders", () => {
-  it("moves open tasks of unknown holders to 'Altri' and only adds the node when needed", () => {
+  it("moves open tasks of unknown holders to 'Others' and only adds the node when needed", () => {
     const s = busySnapshot(Date.parse("2026-11-19T15:00:00Z"));
     expect(bucketUnknownHolders(s.tasks, s.people).others).toBeNull();
     const people = s.people.filter((p) => p.id !== IDS.daniel);
     const r = bucketUnknownHolders(s.tasks, people);
     expect(r.others?.id).toBe(OTHERS_ID);
-    expect(r.others?.stateLabel).toBe("5 task");
+    expect(r.others?.stateLabel).toBe("5 tasks");
     const held = heldByPerson(r.tasks, s.groups.map((g) => g.id));
     expect(held.get(OTHERS_ID)).toHaveLength(5);
     expect(r.tasks.filter((t) => t.holderId === IDS.daniel)).toHaveLength(0);

@@ -26,33 +26,33 @@ export const SIM_SLEEP_AFTER_TICKS = 5;
 const MAX_FEED = 100;
 
 const GROUP_POOL: Array<{ title: string; color: string }> = [
-  { title: "Lancio del nuovo sito", color: "oklch(58% .19 255)" },
-  { title: "Identità visiva 2027", color: "oklch(62% .19 300)" },
-  { title: "Infrastruttura più robusta", color: "oklch(63% .12 190)" },
-  { title: "Comunicazione di fine anno", color: "oklch(71% .15 62)" },
-  { title: "Knowledge base interna", color: "oklch(63% .16 145)" },
-  { title: "Sicurezza degli accessi", color: "oklch(62% .2 18)" },
-  { title: "Archivio dei documenti", color: "oklch(66% .15 110)" },
-  { title: "Report trimestrale", color: "oklch(66% .13 215)" },
+  { title: "New website launch", color: "oklch(58% .19 255)" },
+  { title: "2027 visual identity", color: "oklch(62% .19 300)" },
+  { title: "Sturdier infrastructure", color: "oklch(63% .12 190)" },
+  { title: "Year-end communications", color: "oklch(71% .15 62)" },
+  { title: "Internal knowledge base", color: "oklch(63% .16 145)" },
+  { title: "Access security", color: "oklch(62% .2 18)" },
+  { title: "Document archive", color: "oklch(66% .15 110)" },
+  { title: "Quarterly report", color: "oklch(66% .13 215)" },
 ];
 
 const TASK_POOL = [
-  "Bozza della pagina principale",
-  "Revisione dei testi",
-  "Icone per il menu",
-  "Controllo dei backup",
-  "Inventario dei servizi",
-  "Glossario dei termini",
-  "Calendario delle uscite",
-  "Copertina del documento",
-  "Verifica dei permessi",
-  "Riepilogo delle decisioni",
-  "Schema dei flussi",
-  "Prova sull'ambiente di test",
-  "Pulizia delle cartelle condivise",
-  "Nota per il board",
-  "Aggiornamento delle dipendenze",
-  "Raccolta dei feedback",
+  "Homepage draft",
+  "Copy review",
+  "Menu icons",
+  "Backup check",
+  "Service inventory",
+  "Glossary of terms",
+  "Release calendar",
+  "Document cover",
+  "Permissions audit",
+  "Decision summary",
+  "Flow diagram",
+  "Test environment trial",
+  "Shared folder cleanup",
+  "Note for the board",
+  "Dependency update",
+  "Feedback collection",
 ];
 
 export interface SimTask {
@@ -127,8 +127,8 @@ export function createSimulation(base: Pick<Snapshot, "people" | "settings" | "c
   let board = people.find((p) => p.kind === "user");
   if (!board) {
     board = {
-      id: "user:sim-board", kind: "user", name: "Board", title: "Operatore umano", role: null, reportsTo: null,
-      paletteId: null, customAvatarUrl: null, agentStatus: null, state: "idle", stateLabel: "Nessun task",
+      id: "user:sim-board", kind: "user", name: "Board", title: "Human operator", role: null, reportsTo: null,
+      paletteId: null, customAvatarUrl: null, agentStatus: null, state: "idle", stateLabel: "No tasks",
       stateSince: null, activeTaskId: null, lastActivityAt: null, stats: { received24h: 0, passed24h: 0, closed24h: 0 },
     };
     people.unshift(board);
@@ -373,26 +373,26 @@ export function stepSimulation(s: SimState): FeedRecord[] {
 }
 
 /* ---------------- snapshot ---------------- */
-/** Visual state, with the same Italian labels as the worker (src/worker/presence.ts). */
+/** Visual state, with the same English labels as the worker (src/worker/presence.ts). */
 function visual(s: SimState, p: PersonView): { state: VisualState; label: string; active: SimTask | null } {
   const held = heldBy(s, p.id);
   if (p.kind === "user") {
-    if (!held.length) return { state: "idle", label: "Nessun task", active: null };
-    return { state: "waiting", label: held.length === 1 ? `Da gestire: ${held[0]!.identifier}` : `${held.length} task da gestire`, active: null };
+    if (!held.length) return { state: "idle", label: "No tasks", active: null };
+    return { state: "waiting", label: held.length === 1 ? `To handle: ${held[0]!.identifier}` : `${held.length} tasks to handle`, active: null };
   }
   const a = activeTaskOf(s, p.id);
-  if (a) return { state: "working", label: `Lavora su ${a.identifier} · ${a.progress}%`, active: a };
+  if (a) return { state: "working", label: `Working on ${a.identifier} · ${a.progress}%`, active: a };
   const rv = held.find((t) => t.status === "in_review");
-  if (rv) return { state: "thinking", label: `Revisiona ${rv.identifier}`, active: rv };
+  if (rv) return { state: "thinking", label: `Reviewing ${rv.identifier}`, active: rv };
   if (held.length === 1) {
     const t = held[0]!;
-    const label = t.status === "in_progress" ? `In corso: ${t.identifier} · ${t.progress}%` : t.status === "blocked" ? `Bloccato: ${t.identifier}` : `Da fare: ${t.identifier}`;
+    const label = t.status === "in_progress" ? `In progress: ${t.identifier} · ${t.progress}%` : t.status === "blocked" ? `Blocked: ${t.identifier}` : `To do: ${t.identifier}`;
     return { state: "idle", label, active: null };
   }
-  if (held.length) return { state: "idle", label: `${held.length} task da fare`, active: null };
+  if (held.length) return { state: "idle", label: `${held.length} tasks to do`, active: null };
   const idle = s.tick - (s.emptySince[p.id] ?? 0);
-  if (idle >= SIM_SLEEP_AFTER_TICKS) return { state: "sleepy", label: "Dorme", active: null };
-  return { state: "idle", label: "Libero", active: null };
+  if (idle >= SIM_SLEEP_AFTER_TICKS) return { state: "sleepy", label: "Asleep", active: null };
+  return { state: "idle", label: "Idle", active: null };
 }
 
 export function simulationSnapshot(s: SimState): Snapshot {

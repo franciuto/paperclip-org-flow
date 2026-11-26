@@ -1,89 +1,162 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Org Flow: the live org chart for Paperclip" width="720">
+</p>
+
+<p align="center">
+  <a href="#onboard-your-agent"><img src="https://img.shields.io/badge/Onboard_your_agent-copy_the_prompt-D97757?style=for-the-badge&logo=claude&logoColor=white" alt="Onboard your agent: copy the install prompt"></a>
+  <a href="https://github.com/franciuto/paperclip-org-flow/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/franciuto/paperclip-org-flow/ci.yml?style=for-the-badge&label=CI" alt="CI status"></a>
+</p>
+
+<p align="center">
+  <a href="#install"><img src="https://img.shields.io/badge/Paperclip-2026.1023%2B-1F6FEB?style=for-the-badge" alt="Paperclip 2026.1023 or later"></a>
+  <a href="#install"><img src="https://img.shields.io/badge/Node-20%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node 20 or later"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT license"></a>
+</p>
+
 # Org Flow
 
-Plugin per [Paperclip](https://github.com/paperclipai/paperclip) che mostra l'organigramma della company in diretta: chi sta facendo cosa, quali task ha in mano ciascuno con la percentuale di completamento, i task raggruppati e colorati per task padre, i passaggi di mano animati e un feed di attività.
+A plugin for [Paperclip](https://github.com/paperclipai/paperclip) that shows your company's org chart **live**: **who is doing what**, **which tasks each person holds** with a completion percentage, tasks **grouped and coloured by parent task**, and **animated handoffs** between people.
 
-Gira sull'istanza Paperclip di `ai-pi` (`https://agents.franciuto.com`). Chiave del plugin: `franciuto.org-flow`.
+| | Page | Dashboard widget | Simulation |
+|---|:---:|:---:|:---:|
+| Org chart with each person's state | ✅ | — | ✅ |
+| Tasks held, with status and percentage | ✅ | — | ✅ |
+| Parent tasks with real progress | ✅ | ✅ | ✅ |
+| Who works, who sleeps, what waits for the board | ✅ | ✅ | ✅ |
+| Animated handoffs and live activity | ✅ | — | ✅ |
+| Writes to Paperclip | — | — | — |
 
-![Org Flow con lavoro in corso](docs/img/busy-light.png)
+Read-only: the plugin writes only to its own saved state. Light and dark theme, works on a phone, respects `prefers-reduced-motion`.
 
-## Cosa fa
+## What it looks like
 
-- **Pagina `/<prefisso>/org-flow`** (in produzione `https://agents.franciuto.com/FRA/org-flow`), con link "Org Flow" nella barra laterale. In alto una riga compatta (titolo, indicatore "Live", ora, "Verifica connessione", interruttore "Simulazione"), poi:
-  - l'**organigramma a tutta pagina**, largo quanto la pagina e alto quanto lo schermo, scalato per starci tutto (su telefono scorre di lato): i personaggi di Paperclip nella posa del loro stato (al lavoro, revisiona, ha ricevuto, ha chiuso, confuso, dorme, in pausa) e sotto ognuno i task in mano, con stato e percentuale;
-  - sotto ogni persona nome, titolo preso da Paperclip (o il ruolo, per esempio "CEO") e stato attuale;
-  - pulsante "Schermo intero" per vederla a tutto schermo (Esc per uscire);
-  - ogni **reparto** (il sotto-albero di ciascun riporto diretto del CEO, per esempio Grafica o IT e infrastruttura) è racchiuso in un riquadro neutro con il nome e il numero di persone; il colore resta riservato ai task padre;
-  - quando un task passa di mano il chip vola dal vecchio al nuovo assegnatario;
-  - clic su un task o una persona: la **scheda di dettaglio** scorre sopra il bordo destro dell'organigramma (su telefono sale dal basso); si chiude con × o Esc. Task: percentuale e sua fonte, percorso tra le persone con i tempi, rimbalzi. Persona: task in mano, statistiche delle 24 ore;
-  - sotto l'organigramma, **sezioni a scomparsa** (si ricordano aperte o chiuse nel browser, con "Comprimi tutto / Espandi tutto"): task padre con avanzamento (figli chiusi / figli totali) e chi ci sta lavorando; "Adesso" (quanti agenti lavorano, rivedono, dormono, quanti task aspettano il board); "Attività in diretta";
-  - i task in mano a qualcuno che non è nell'organigramma (per esempio un agente appena creato) finiscono nel nodo "Altri" invece di sparire;
-  - organigramma navigabile da tastiera: un solo punto di tabulazione, frecce, Home e Fine per muoversi tra persone e task;
-  - stato tranquillo quando non ci sono task aperti, con la sezione "Chiusi di recente";
-  - modalità **Simulazione** con persone vere e task finti, per vedere la pagina animata; non scrive nulla su Paperclip (il banner resta sopra l'organigramma).
-- **Riquadro per la Dashboard** di Paperclip: avanzamento dei padri, chi lavora, chi dorme, cosa aspetta il board.
-- **Strumento `report_progress`** per gli agenti, che possono dichiarare la percentuale dei loro task. Le istruzioni degli agenti non sono state modificate: adottarlo è una scelta del proprietario.
-- Tema chiaro e scuro di Paperclip, usabile da telefono, rispetta `prefers-reduced-motion`.
-- Solo lettura su Paperclip: il plugin scrive esclusivamente nel proprio stato.
+<p align="center">
+  <img src="assets/demo/busy-light.png" alt="The Org Flow page with work in progress: the board and the CEO at the top, four departments in boxes below, each person with their task chips" width="720">
+</p>
 
-| Tema scuro | Telefono | Dashboard |
-| --- | --- | --- |
-| ![Tema scuro](docs/img/busy-dark.png) | ![Telefono](docs/img/phone.png) | ![Riquadro della Dashboard](docs/img/widget.png) |
+<table align="center">
+  <tr>
+    <th>Dark theme</th>
+    <th>Phone</th>
+    <th>Dashboard widget</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="assets/demo/busy-dark.png" alt="The Org Flow page in the dark theme" width="300"></td>
+    <td valign="top"><img src="assets/demo/phone.png" alt="The Org Flow page on a phone" width="150"></td>
+    <td valign="top"><img src="assets/demo/widget.png" alt="The Org Flow card on the Paperclip Dashboard" width="300"></td>
+  </tr>
+  <tr>
+    <th>Task detail</th>
+    <th>Nothing open</th>
+    <th>Simulation</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="assets/demo/busy-selected-task.png" alt="The detail panel of a task: percentage and its source, path between people, bounces" width="300"></td>
+    <td valign="top"><img src="assets/demo/quiet-dark.png" alt="The quiet state, dark theme: no open tasks and the recently closed ones" width="300"></td>
+    <td valign="top"><img src="assets/demo/simulation.png" alt="Simulation mode: real people with fake tasks, clearly flagged" width="300"></td>
+  </tr>
+</table>
 
-| Nessun task aperto | Simulazione |
-| --- | --- |
-| ![Stato tranquillo, tema scuro](docs/img/quiet-dark.png) | ![Simulazione con dati finti](docs/img/simulation.png) |
+The screenshots come from the visual test bench with fake data ([docs/development.md](docs/development.md#visual-test-bench)).
 
-Gli screenshot vengono dal banco di prova visivo con dati finti ([sviluppo.md](docs/sviluppo.md#banco-di-prova-visivo)).
+## What you get
 
-## Avvio rapido
+- **A page** at `/<company-prefix>/org-flow`, with an "Org Flow" link in the sidebar. A compact header (title, "Live" indicator, time, "Check connection", "Simulation" toggle, "Full screen"), then:
+  - the **org chart**, as wide as the page and as tall as the screen: Paperclip's characters in the pose of their state (working, reviewing, received, closed, confused, asleep, paused), the person's title, and under each person the tasks they hold with status and percentage;
+  - **departments**: the subtree under each direct report of the CEO, in a neutral box with its name and headcount (the colour is kept for parent tasks);
+  - **handoffs**: when a task changes hands, its chip flies from the old assignee to the new one;
+  - a **detail panel** on click: for a task, the percentage and its source, the path between people with timings, the bounces; for a person, the tasks held and 24-hour statistics;
+  - **collapsible sections** below: parent tasks with progress, "Now", "Live activity", and "Recently closed" when nothing is open.
+- **A Dashboard widget**: progress of the parent tasks, who is working, who is asleep, what waits for the board.
+- **A tool for agents**, `report_progress`, so an agent can declare how far along a task is. Adopting it is up to you: [docs/agents-and-percentage.md](docs/agents-and-percentage.md).
+- **Simulation**: your real people with fake tasks, to see the page animated when your company is quiet. It writes nothing.
 
-Su `ai-pi`, con la CLI di Paperclip autenticata come amministratore. Prima di installare o disinstallare fai un backup del database ([installazione.md](docs/installazione.md#backup-prima-di-toccare-il-database)).
+## Install
+
+You need a Paperclip instance (2026.1023.0 or later), the `paperclipai` CLI authenticated as an administrator, Node 20+ and `git`. Back up the Paperclip database first ([docs/installation.md](docs/installation.md#back-up-the-database-before-touching-it)).
+
+### By hand
 
 ```bash
-export PATH="$HOME/.local/node/bin:$PATH"
-PC="paperclipai --api-base https://agents.franciuto.com:"
-
-# installazione (dal submodule di ai-final-boss)
-cd ~/ai-final-boss/paperclip-plugins/org-flow
+git clone https://github.com/franciuto/paperclip-org-flow.git
+cd paperclip-org-flow
 npm ci && npm run build
-$PC plugin install --local ~/ai-final-boss/paperclip-plugins/org-flow
+
+PC="paperclipai --api-base https://your-paperclip.example.com:"
+$PC plugin install --local "$PWD"
 $PC plugin list
-
-# aggiornamento: Paperclip ricarica il plugin da solo quando cambia dist/
-cd ~/ai-final-boss && git submodule update --remote paperclip-plugins/org-flow
-cd paperclip-plugins/org-flow && npm ci && npm run build
-
-# disinstallazione (--force cancella anche impostazioni e stato salvato)
-$PC plugin uninstall franciuto.org-flow
 ```
 
-Il `:` finale in `--api-base` è voluto: è la chiave sotto cui è salvato il token in `~/.paperclip/auth.json`.
+The trailing `:` in `--api-base` is intentional: it is the key under which the token is stored in `~/.paperclip/auth.json`. Then open `https://your-paperclip.example.com/<company-prefix>/org-flow`.
 
-Sviluppo: `npm run typecheck && npm test && npm run build`, screenshot con `npm run test:ui`.
+### Onboard your agent
 
-## Documentazione
+Copy/paste into Claude Code (or any coding agent that can run commands on the machine that reaches your Paperclip):
 
-| Documento | Contenuto |
-| --- | --- |
-| [docs/specifica.md](docs/specifica.md) | specifica funzionale della 1.0, aggiornata con le differenze dell'implementazione |
-| [docs/architettura.md](docs/architettura.md) | componenti, flusso dei dati, cache e polling, stato salvato, più company, limiti dell'host, modi di guasto |
-| [docs/contratto-dati.md](docs/contratto-dati.md) | tipi scambiati tra worker e UI, chiavi del bridge con esempi, stream, regole di versionamento |
-| [docs/stati-e-percentuali.md](docs/stati-e-percentuali.md) | regole degli stati visivi, delle percentuali, dei rimbalzi e dei percorsi |
-| [docs/agenti-e-percentuale.md](docs/agenti-e-percentuale.md) | lo strumento `report_progress` e il testo pronto per le istruzioni degli agenti |
-| [docs/installazione.md](docs/installazione.md) | installazione, aggiornamento, impostazioni, disinstallazione, verifiche con `curl` |
-| [docs/sviluppo.md](docs/sviluppo.md) | struttura del repo, script, test, convenzioni, come aggiungere stati e campi |
-| [docs/risoluzione-problemi.md](docs/risoluzione-problemi.md) | sintomi, cause, rimedi |
-| [docs/decisioni.md](docs/decisioni.md) | registro delle decisioni |
-| [CHANGELOG.md](CHANGELOG.md) | versioni |
+```text
+Install the Paperclip plugin Org Flow from https://github.com/franciuto/paperclip-org-flow following its README and docs/installation.md: ask me for my Paperclip URL, back up the Paperclip database first, clone the repo, run `npm ci && npm run build`, install it with `paperclipai plugin install --local`, then run the checks in docs/installation.md and tell me the page address.
+```
 
-Il prototipo statico da cui è nata la UI è in [prototype/](prototype/org-flow.src.html).
+## Update and uninstall
 
-## Stato
+```bash
+cd paperclip-org-flow
+git pull && npm ci && npm run build      # Paperclip reloads the plugin by itself when dist/ changes
 
-- In produzione: 0.1.0 (feed minimo), installata il 2026-11-19.
-- In sviluppo: 1.0.0, worker e UI completi, in revisione. Richiede Paperclip 2026.1023.0 o compatibile.
-- Lo stream in tempo reale dei plugin non è collegato da Paperclip (risponde 501): la pagina interroga il worker ogni 3 secondi.
+$PC plugin uninstall franciuto.org-flow  # --force also deletes settings and saved state
+```
 
-## Licenza
+A change of the worker's version needs a reinstall: see [docs/installation.md](docs/installation.md#updating). The settings (`sleepAfterMinutes`, `keepClosedHours`, `enableSimulation`, `departmentNames`) are in Paperclip: instance settings → Plugins → Org Flow.
 
-Repository privato, per uso personale. `package.json` riporta `MIT` come valore predefinito del modello di partenza: non è una licenza concessa a terzi.
+## When something is off
+
+| What you see | Fix |
+|---|---|
+| **The page says "Unreachable"** | Check the plugin is `ready` and the worker runs: [troubleshooting](docs/troubleshooting.md#the-page-says-unreachable). |
+| **Plugin in `error` state** | [docs/troubleshooting.md](docs/troubleshooting.md#plugin-in-error-state). |
+| **No characters in the org chart** | The host did not serve the character images: [docs/troubleshooting.md](docs/troubleshooting.md#no-characters-in-the-org-chart). |
+| **Percentages are always "estimated from the status"** | Nobody reports or plans a percentage yet: [docs/troubleshooting.md](docs/troubleshooting.md#percentages-are-always-estimated-from-the-status). |
+| **A task is missing** | [docs/troubleshooting.md](docs/troubleshooting.md#tasks-are-missing). |
+| **After a Paperclip update** | [docs/troubleshooting.md](docs/troubleshooting.md#after-a-paperclip-update). |
+
+Test the connection from the page with **Check connection**, or by hand with the `curl` checks in [docs/installation.md](docs/installation.md#bridge-with-curl).
+
+## Make it yours
+
+- **Department names:** the `departmentNames` setting maps a lead to a name when the one deduced from the title is wrong.
+- **Quiet and sleepy:** `sleepAfterMinutes` and `keepClosedHours` set when a person is shown asleep and how long closed tasks stay visible.
+- **Percentages from your agents:** add the `report_progress` text from [docs/agents-and-percentage.md](docs/agents-and-percentage.md) to their instructions.
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [docs/how-it-works.md](docs/how-it-works.md) | components, data flow, caches and polling, saved state, multiple companies, host limits, failure modes |
+| [docs/data-contract.md](docs/data-contract.md) | types exchanged between worker and UI, bridge keys with examples, streams, versioning rules |
+| [docs/states-and-percentages.md](docs/states-and-percentages.md) | rules for visual states, percentages, bounces and paths |
+| [docs/agents-and-percentage.md](docs/agents-and-percentage.md) | the `report_progress` tool and a ready-made text for the agents' instructions |
+| [docs/installation.md](docs/installation.md) | install, update, settings, uninstall, checks with `curl` |
+| [docs/development.md](docs/development.md) | repo structure, scripts, tests, conventions, how to add states and fields |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | symptoms, causes, fixes |
+| [docs/design-decisions.md](docs/design-decisions.md) | the choices behind the plugin, with the reason |
+| [CHANGELOG.md](CHANGELOG.md) | versions |
+
+The static prototype the interface grew out of is in [prototype/](prototype/org-flow.src.html).
+
+## Development
+
+```bash
+npm ci
+npm run typecheck && npm test && npm run build
+npm run test:ui        # screenshots in tests/ui/out/ (needs Chromium or Chrome)
+```
+
+Contributions are welcome: open an issue or a pull request. Read [CLAUDE.md](CLAUDE.md) and [docs/development.md](docs/development.md) first.
+
+## Status
+
+Paperclip does not wire up the plugins' real-time stream yet (the endpoint answers 501), so the page polls the worker every 3 seconds. When Paperclip enables the stream the page will use it with no changes.
+
+## License
+
+[MIT](LICENSE).

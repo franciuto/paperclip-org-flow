@@ -23,7 +23,7 @@ export type Who = keyof typeof IDS;
 
 const ORG: Array<[Who, string, string | null, Who | null, string | null]> = [
   // key, name, title, reportsTo, palette
-  ["board", "Board", "Operatore umano", null, null],
+  ["board", "Board", "Human operator", null, null],
   ["laura", "Laura", "CEO", null, "cherry-pop"],
   ["giulia", "Giulia Bennett", "Graphic Team Lead", "laura", "golden-hour"],
   ["martina", "Martina Hayes", "Senior Designer", "giulia", "orchid-peach"],
@@ -38,10 +38,10 @@ const ORG: Array<[Who, string, string | null, Who | null, string | null]> = [
 
 /** Departments as the worker derives them: subtree under each direct report of the CEO. */
 export const DEPARTMENTS: DepartmentView[] = [
-  { id: IDS.giulia, name: "Grafica", leadId: IDS.giulia, memberIds: [IDS.giulia, IDS.martina, IDS.sofia] },
-  { id: IDS.iris, name: "Comunicazione", leadId: IDS.iris, memberIds: [IDS.iris] },
-  { id: IDS.jamal, name: "IT e infrastruttura", leadId: IDS.jamal, memberIds: [IDS.jamal, IDS.arold, IDS.luke, IDS.daniel] },
-  { id: IDS.joe, name: "Libreria", leadId: IDS.joe, memberIds: [IDS.joe] },
+  { id: IDS.giulia, name: "Graphics", leadId: IDS.giulia, memberIds: [IDS.giulia, IDS.martina, IDS.sofia] },
+  { id: IDS.iris, name: "Communications", leadId: IDS.iris, memberIds: [IDS.iris] },
+  { id: IDS.jamal, name: "IT and infrastructure", leadId: IDS.jamal, memberIds: [IDS.jamal, IDS.arold, IDS.luke, IDS.daniel] },
+  { id: IDS.joe, name: "Library", leadId: IDS.joe, memberIds: [IDS.joe] },
 ];
 const deptOf = (id: string) => DEPARTMENTS.find((d) => d.memberIds.includes(id))?.id ?? null;
 
@@ -94,7 +94,7 @@ function buildTasks(specs: TaskSpec[], now: number): { tasks: TaskView[]; feed: 
   let ev = 1;
   for (const s of specs) {
     const id = `iss-${s.n}`;
-    const identifier = `FRA-${s.n}`;
+    const identifier = `ACME-${s.n}`;
     const parentId = s.group === null ? null : `grp-${s.group}`;
     const step = s.route.length > 1 ? Math.max(1, Math.floor((s.startMin - (s.closedMin ?? 2)) / s.route.length)) : 1;
     const journey = s.route.map((w, i) => ({ personId: IDS[w], since: iso(now - (s.startMin - i * step) * MIN) }));
@@ -151,7 +151,7 @@ function groupsFor(tasks: TaskView[], defs: Array<[number, number, string, numbe
     const done = kids.filter((t) => t.status === "done").length + doneBefore;
     return {
       id: `grp-${g}`,
-      identifier: `FRA-${n}`,
+      identifier: `ACME-${n}`,
       title,
       color: GROUP_COLORS[i % GROUP_COLORS.length]!,
       status: closed ? "done" : "in_progress",
@@ -171,43 +171,43 @@ export function busySnapshot(now = Date.now()): Snapshot {
   const L: Who = "laura";
   const { tasks, feed } = buildTasks(
     [
-      { n: 55, title: "Pose degli avatar per i reparti", group: 0, route: [B, L, "giulia", "sofia"], status: "in_progress", progress: 45, startMin: 62 },
-      { n: 56, title: "Palette uniforme per gli sfondi", group: 0, route: [B, L, "giulia", "martina"], status: "in_progress", progress: 72, startMin: 55, source: "checklist" },
-      { n: 57, title: "Guida all'uso degli avatar", group: 0, route: [B, L, "giulia", L], status: "in_review", progress: 100, startMin: 70, bounces: 1 },
-      { n: 58, title: "Backup di Postgres fuori dalla microSD", group: 1, route: [B, L, "jamal", "arold", "daniel"], status: "in_progress", progress: 30, startMin: 48, note: "Script pronto, manca la prova di ripristino" },
-      { n: 59, title: "Aggiornare Paperclip alla 2026.1106.0", group: 1, route: [B, L, "jamal", "arold", "luke", B], status: "blocked", progress: 55, startMin: 66 },
-      { n: 60, title: "Rotazione del log service.out", group: 1, route: [B, L, "jamal", "arold"], status: "todo", progress: 5, startMin: 30 },
-      { n: 61, title: "Worker del plugin: eventi e stream", group: 2, route: [B, L, "jamal", "daniel"], status: "in_progress", progress: 18, startMin: 40 },
-      { n: 62, title: "Pagina React dell'organigramma", group: 2, route: [B, L, "jamal"], status: "todo", progress: 5, startMin: 20 },
-      { n: 63, title: "Newsletter di dicembre", group: 3, route: [B, L, "iris"], status: "in_progress", progress: 60, startMin: 58 },
-      { n: 64, title: "Post LinkedIn sul nuovo homelab", group: 3, route: [B, L, "giulia"], status: "todo", progress: 5, startMin: 25 },
-      { n: 65, title: "Indice della knowledge base homelab", group: 4, route: [B, L, "joe"], status: "done", progress: 100, startMin: 90, closedMin: 22 },
-      { n: 66, title: "Allarme sulla temperatura di ai-pi", group: 1, route: [B, L, "jamal", "arold", "daniel"], status: "todo", progress: 5, startMin: 35 },
-      { n: 67, title: "Certificati TLS in scadenza", group: null, route: [B, L, "jamal", "arold", "daniel"], status: "todo", progress: 5, startMin: 28 },
-      { n: 68, title: "Pulizia dei container fermi", group: 1, route: [B, L, "jamal", "arold", "daniel"], status: "backlog", progress: 0, startMin: 26 },
+      { n: 55, title: "Avatar poses for the departments", group: 0, route: [B, L, "giulia", "sofia"], status: "in_progress", progress: 45, startMin: 62 },
+      { n: 56, title: "Uniform palette for backgrounds", group: 0, route: [B, L, "giulia", "martina"], status: "in_progress", progress: 72, startMin: 55, source: "checklist" },
+      { n: 57, title: "Avatar usage guide", group: 0, route: [B, L, "giulia", L], status: "in_review", progress: 100, startMin: 70, bounces: 1 },
+      { n: 58, title: "Postgres backup off the microSD", group: 1, route: [B, L, "jamal", "arold", "daniel"], status: "in_progress", progress: 30, startMin: 48, note: "Script ready, restore test still missing" },
+      { n: 59, title: "Upgrade Paperclip to 2026.1106.0", group: 1, route: [B, L, "jamal", "arold", "luke", B], status: "blocked", progress: 55, startMin: 66 },
+      { n: 60, title: "service.out log rotation", group: 1, route: [B, L, "jamal", "arold"], status: "todo", progress: 5, startMin: 30 },
+      { n: 61, title: "Plugin worker: events and stream", group: 2, route: [B, L, "jamal", "daniel"], status: "in_progress", progress: 18, startMin: 40 },
+      { n: 62, title: "React page for the org chart", group: 2, route: [B, L, "jamal"], status: "todo", progress: 5, startMin: 20 },
+      { n: 63, title: "December newsletter", group: 3, route: [B, L, "iris"], status: "in_progress", progress: 60, startMin: 58 },
+      { n: 64, title: "LinkedIn post about the new data centre", group: 3, route: [B, L, "giulia"], status: "todo", progress: 5, startMin: 25 },
+      { n: 65, title: "Homelab knowledge base index", group: 4, route: [B, L, "joe"], status: "done", progress: 100, startMin: 90, closedMin: 22 },
+      { n: 66, title: "Temperature alert for the server room", group: 1, route: [B, L, "jamal", "arold", "daniel"], status: "todo", progress: 5, startMin: 35 },
+      { n: 67, title: "Expiring TLS certificates", group: null, route: [B, L, "jamal", "arold", "daniel"], status: "todo", progress: 5, startMin: 28 },
+      { n: 68, title: "Cleanup of stopped containers", group: 1, route: [B, L, "jamal", "arold", "daniel"], status: "backlog", progress: 0, startMin: 26 },
     ],
     now,
   );
-  const groups = groupsFor(tasks, [[0, 50, "Nuova identità visiva degli agenti", 2], [1, 51, "Homelab più robusto", 3], [2, 52, "Lancio del plugin Org Flow", 1], [3, 53, "Comunicazione di dicembre", 2], [4, 54, "Knowledge base dell'infrastruttura", 3]], now);
+  const groups = groupsFor(tasks, [[0, 50, "New visual identity for the agents", 2], [1, 51, "Sturdier infrastructure", 3], [2, 52, "Org Flow plugin launch", 1], [3, 53, "December communications", 2], [4, 54, "Infrastructure knowledge base", 3]], now);
   groups.push({
-    id: "standalone", identifier: null, title: "Senza padre", color: "oklch(62% 0 0)", status: null, progress: 0,
+    id: "standalone", identifier: null, title: "No parent", color: "oklch(62% 0 0)", status: null, progress: 0,
     childrenTotal: 1, childrenDone: 0, holderIds: [IDS.daniel], updatedAt: iso(now - 28 * MIN),
   });
   const people: PersonView[] = [
-    person("board", "waiting", "Da gestire: FRA-59", now),
-    person("laura", "thinking", "Revisiona FRA-57", now, { stats: { received24h: 9, passed24h: 8, closed24h: 2 } }),
-    person("giulia", "idle", "Da fare: FRA-64", now, { stats: { received24h: 4, passed24h: 3, closed24h: 0 } }),
-    person("martina", "working", "Lavora su FRA-56 · 72%", now, { activeTaskId: "iss-56", stats: { received24h: 1, passed24h: 0, closed24h: 1 } }),
-    person("sofia", "working", "Lavora su FRA-55 · 45%", now, { activeTaskId: "iss-55", stats: { received24h: 1, passed24h: 0, closed24h: 0 } }),
-    person("iris", "working", "Lavora su FRA-63 · 60%", now, { activeTaskId: "iss-63" }),
-    person("jamal", "idle", "Da fare: FRA-62", now, { stats: { received24h: 6, passed24h: 5, closed24h: 0 } }),
-    person("arold", "idle", "Da fare: FRA-60", now),
-    person("luke", "sleepy", "Dorme", now, { stateSince: iso(now - 12 * MIN) }),
-    person("daniel", "working", "Lavora su FRA-58 · 30%", now, { activeTaskId: "iss-58", stats: { received24h: 5, passed24h: 0, closed24h: 1 } }),
-    person("joe", "sleepy", "Dorme", now, { stateSince: iso(now - 20 * MIN), stats: { received24h: 1, passed24h: 0, closed24h: 1 } }),
+    person("board", "waiting", "To handle: ACME-59", now),
+    person("laura", "thinking", "Reviewing ACME-57", now, { stats: { received24h: 9, passed24h: 8, closed24h: 2 } }),
+    person("giulia", "idle", "To do: ACME-64", now, { stats: { received24h: 4, passed24h: 3, closed24h: 0 } }),
+    person("martina", "working", "Working on ACME-56 · 72%", now, { activeTaskId: "iss-56", stats: { received24h: 1, passed24h: 0, closed24h: 1 } }),
+    person("sofia", "working", "Working on ACME-55 · 45%", now, { activeTaskId: "iss-55", stats: { received24h: 1, passed24h: 0, closed24h: 0 } }),
+    person("iris", "working", "Working on ACME-63 · 60%", now, { activeTaskId: "iss-63" }),
+    person("jamal", "idle", "To do: ACME-62", now, { stats: { received24h: 6, passed24h: 5, closed24h: 0 } }),
+    person("arold", "idle", "To do: ACME-60", now),
+    person("luke", "sleepy", "Asleep", now, { stateSince: iso(now - 12 * MIN) }),
+    person("daniel", "working", "Working on ACME-58 · 30%", now, { activeTaskId: "iss-58", stats: { received24h: 5, passed24h: 0, closed24h: 1 } }),
+    person("joe", "sleepy", "Asleep", now, { stateSince: iso(now - 20 * MIN), stats: { received24h: 1, passed24h: 0, closed24h: 1 } }),
   ];
-  feed.unshift({ id: "ev-run-1", at: iso(now - 1 * MIN), kind: "run_started", actor: { kind: "agent", id: IDS.daniel, name: "Daniel Harper" }, issueId: "iss-58", identifier: "FRA-58", title: "Backup di Postgres fuori dalla microSD", parentId: "grp-1" });
-  feed.unshift({ id: "ev-prog-1", at: iso(now - 0.5 * MIN), kind: "progress", actor: { kind: "agent", id: IDS.martina }, percent: 72, note: "Palette chiara pronta, manca la scura", issueId: "iss-56", identifier: "FRA-56", title: "Palette uniforme per gli sfondi", parentId: "grp-0" });
+  feed.unshift({ id: "ev-run-1", at: iso(now - 1 * MIN), kind: "run_started", actor: { kind: "agent", id: IDS.daniel, name: "Daniel Harper" }, issueId: "iss-58", identifier: "ACME-58", title: "Postgres backup off the microSD", parentId: "grp-1" });
+  feed.unshift({ id: "ev-prog-1", at: iso(now - 0.5 * MIN), kind: "progress", actor: { kind: "agent", id: IDS.martina }, percent: 72, note: "Light palette ready, dark one still missing", issueId: "iss-56", identifier: "ACME-56", title: "Uniform palette for backgrounds", parentId: "grp-0" });
   const open = tasks.filter((t) => !t.closedAt);
   return {
     companyId: "co-1",
@@ -228,21 +228,21 @@ export function quietSnapshot(now = Date.now()): Snapshot {
   const H = 60;
   const { tasks, feed } = buildTasks(
     [
-      { n: 41, title: "Inventario delle porte su home-pi", group: 0, route: [B, L, "jamal", "arold", "luke"], status: "done", progress: 100, startMin: 9 * H, closedMin: 1.5 * H },
-      { n: 42, title: "Glossario dei servizi di ai-pi", group: 1, route: [B, L, "joe"], status: "done", progress: 100, startMin: 8 * H, closedMin: 3 * H },
-      { n: 43, title: "Icone di stato per gli agenti", group: 2, route: [B, L, "giulia", "sofia"], status: "done", progress: 100, startMin: 10 * H, closedMin: 4.2 * H },
-      { n: 44, title: "Calendario editoriale di gennaio", group: 3, route: [B, L, "iris"], status: "done", progress: 100, startMin: 11 * H, closedMin: 6 * H },
-      { n: 45, title: "Allarme sulla temperatura di ai-pi", group: 0, route: [B, L, "jamal", "arold", "daniel"], status: "done", progress: 100, startMin: 12 * H, closedMin: 7.5 * H },
+      { n: 41, title: "Port inventory on the edge router", group: 0, route: [B, L, "jamal", "arold", "luke"], status: "done", progress: 100, startMin: 9 * H, closedMin: 1.5 * H },
+      { n: 42, title: "Glossary of the server services", group: 1, route: [B, L, "joe"], status: "done", progress: 100, startMin: 8 * H, closedMin: 3 * H },
+      { n: 43, title: "Status icons for the agents", group: 2, route: [B, L, "giulia", "sofia"], status: "done", progress: 100, startMin: 10 * H, closedMin: 4.2 * H },
+      { n: 44, title: "January editorial calendar", group: 3, route: [B, L, "iris"], status: "done", progress: 100, startMin: 11 * H, closedMin: 6 * H },
+      { n: 45, title: "Temperature alert for the server room", group: 0, route: [B, L, "jamal", "arold", "daniel"], status: "done", progress: 100, startMin: 12 * H, closedMin: 7.5 * H },
     ],
     now,
   );
-  const groups = groupsFor(tasks, [[0, 40, "Homelab più robusto"], [1, 39, "Knowledge base dell'infrastruttura"], [2, 38, "Nuova identità visiva"], [3, 37, "Comunicazione di gennaio"]], now, true);
-  // The worker's label is just "Dorme" (the duration lives in stateSince).
+  const groups = groupsFor(tasks, [[0, 40, "Sturdier infrastructure"], [1, 39, "Infrastructure knowledge base"], [2, 38, "New visual identity"], [3, 37, "January communications"]], now, true);
+  // The worker's label is just "Asleep" (the duration lives in stateSince).
   const sleepy = (k: Who, mins: number, closed = 0) =>
-    person(k, "sleepy", "Dorme", now, {
+    person(k, "sleepy", "Asleep", now, {
       stateSince: iso(now - mins * MIN), agentStatus: "idle", stats: { received24h: closed, passed24h: 0, closed24h: closed } });
   const people: PersonView[] = [
-    person("board", "idle", "Nessun task", now),
+    person("board", "idle", "No tasks", now),
     sleepy("laura", 85),
     sleepy("giulia", 240),
     sleepy("martina", 300),

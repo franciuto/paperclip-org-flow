@@ -1,68 +1,78 @@
 # Changelog
 
-Versioni di Org Flow. La versione che vede Paperclip è quella in `src/manifest.ts`.
+All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/). The version Paperclip sees is the one in `src/manifest.ts`.
 
-## [1.2.0] — 2026-11-19
+## [Unreleased]
 
-### Aggiunto
+### Changed
 
-- Titolo di ogni agente sotto il nome, preso da Paperclip (campo titolo dell'agente). Se in Paperclip il titolo è vuoto si usa l'etichetta del ruolo di Paperclip (`AGENT_ROLE_LABELS`, per esempio `ceo` → "CEO"). Lo stato ("Dorme", "Lavora su…") scende di una riga.
-- Pulsante "Schermo intero" nell'intestazione: usa lo schermo intero del browser; dove non è disponibile (per esempio Safari su iPhone) la pagina copre tutta l'interfaccia di Paperclip. Si esce con Esc o con lo stesso pulsante.
+- The interface, the plugin settings, the `report_progress` tool and the documentation are now in English. The documentation files have English names (`docs/how-it-works.md`, `docs/installation.md`, ...).
+- Locale for dates and sorting is `en-GB`.
+- The project is licensed under the MIT licence.
 
-## [1.1.0] — 2026-11-19
+### Removed
 
-### Cambiato
+- The 1.0 specification (`docs/specifica.md`): `docs/how-it-works.md`, `docs/data-contract.md` and `docs/states-and-percentages.md` describe the behaviour.
 
-- Pagina riorganizzata: intestazione compatta su una riga; organigramma a tutta pagina (largo quanto la pagina, alto quanto lo schermo, scalato per starci tutto; su telefono scorre di lato) con spaziature più ampie.
-- La scheda di dettaglio di task e persone scorre sopra il bordo destro dell'organigramma (su telefono sale dal basso); si chiude con × o Esc, il focus entra nella scheda e torna dov'era alla chiusura.
-- Task padre, riepilogo "Adesso", attività in diretta e "Chiusi di recente" sono sezioni a scomparsa sotto l'organigramma, ricordate nel browser, con "Comprimi tutto / Espandi tutto".
+## [1.2.0] - 2026-11-19
 
-### Aggiunto
+### Added
 
-- Reparti: ogni reparto (sotto-albero di un riporto diretto del CEO) è racchiuso in un riquadro neutro con nome e numero di persone. Con un worker che non manda i reparti la pagina li ricava dalla catena di riporto ("Team di <nome>").
+- Title of each agent under the name, taken from Paperclip (the agent's title field). If the title is empty in Paperclip, Paperclip's role label is used (`AGENT_ROLE_LABELS`, for example `ceo` → "CEO"). The state ("Asleep", "Working on…") moves down one line.
+- "Full screen" button in the header: it uses the browser's full screen; where that is not available (for example Safari on iPhone) the page covers the whole Paperclip interface. Exit with Esc or the same button.
 
-## [1.0.0] — 2026-11-19
+## [1.1.0] - 2026-11-19
 
-Prima versione completa. Specifica in [docs/specifica.md](docs/specifica.md).
+### Changed
 
-### Aggiunto
+- Page reorganised: compact one-row header; full-width org chart (as wide as the page, as tall as the screen, scaled to fit entirely; on a phone it scrolls sideways) with more generous spacing.
+- The detail panel for tasks and people slides over the right edge of the org chart (on a phone it rises from the bottom); close it with × or Esc, focus moves into the panel and returns to where it was on close.
+- Parent tasks, the "Now" summary, live activity and "Recently closed" are collapsible sections below the org chart, remembered in the browser, with "Collapse all / Expand all".
 
-- Pagina `/<prefisso>/org-flow` con:
-  - striscia dei task padre con avanzamento reale (figli chiusi / figli totali, annullati esclusi) e persone coinvolte; clic per evidenziare un gruppo;
-  - riepilogo "Al lavoro", "Rivedono", "Dormono", "Aspettano te";
-  - organigramma live con i personaggi di Paperclip, stati visivi (`working`, `thinking`, `listening`, `success`, `confused`, `sleepy`, `idle`, `paused`, `waiting`) e chip dei task in mano con stato e percentuale;
-  - volo animato del chip nei passaggi di mano e stati immediati all'arrivo degli eventi;
-  - schede di dettaglio del task (fonte della percentuale, percorso con i tempi, rimbalzi, link a Paperclip) e della persona (task per gruppo, statistiche 24 h);
-  - feed "Attività in diretta";
-  - stato tranquillo con i task chiusi di recente;
-  - modalità Simulazione con dati finti, senza scritture.
-- Riquadro per la Dashboard di Paperclip (`dashboardWidget`).
-- Percentuale dei task da quattro fonti: valore riportato dall'agente, sotto-task, checklist del documento `plan`, stima dallo stato.
-- Strumento per gli agenti `report_progress` (`issue`, `percent`, `note`), limitato ai task propri e dei sottoposti.
-- Cronologia dei passaggi nello stato del plugin (ultime 300 voci per company): percorsi, rimbalzi, statistiche.
-- Colori stabili per task padre.
-- Impostazioni per company: `sleepAfterMinutes`, `keepClosedHours`, `enableSimulation`.
-- Aggiornamento in diretta via polling (`events` ogni 3 s con cursore, `snapshot` su richiesta, `refresh` ogni 60 s); lo stream resta pronto per quando Paperclip lo collegherà.
-- Azioni `ping` (evento di prova) e `refresh`.
-- Tema chiaro e scuro, layout per telefono, `prefers-reduced-motion`.
-- Banco di prova visivo con screenshot (`npm run test:ui`).
-- Documentazione in `docs/`.
+### Added
 
-### Modificato
+- Departments: each department (subtree of a direct report of the CEO) is enclosed in a neutral box with its name and headcount. With a worker that does not send departments, the page derives them from the reporting chain ("<name>'s team").
 
-- Il feed è salvato nella chiave `feed` (prima `recent-feed`, che viene ancora letta se `feed` è vuota).
-- Nuove capability: `issue.subtree.read`, `issue.documents.read`, `agent.tools.register`, `ui.dashboardWidget.register`. All'aggiornamento Paperclip può chiedere di approvarle.
+## [1.0.0] - 2026-11-19
 
-## [0.1.0] — 2026-11-19
+First complete version.
 
-Installata in produzione il 2026-11-19 verso le 00:15 (backup `~/.paperclip/backups-manual/pre-plugin-org-flow-install-20261119-001550.dump`).
+### Added
 
-### Aggiunto
+- Page `/<prefix>/org-flow` with:
+  - strip of parent tasks with real progress (closed children / total children, cancelled excluded) and the people involved; click to highlight a group;
+  - summary "Working", "Reviewing", "Asleep", "Waiting on you";
+  - live org chart with the Paperclip characters, visual states (`working`, `thinking`, `listening`, `success`, `confused`, `sleepy`, `idle`, `paused`, `waiting`) and chips for the tasks they hold with status and percentage;
+  - animated chip flight on handoffs and immediate states when events arrive;
+  - detail panels for the task (percentage source, path with timings, bounces, link to Paperclip) and for the person (tasks by group, 24 h statistics);
+  - "Live activity" feed;
+  - quiet state with recently closed tasks;
+  - Simulation mode with fake data, with no writes.
+- Widget for the Paperclip Dashboard (`dashboardWidget`).
+- Task percentage from four sources: value reported by the agent, subtasks, checklist in the `plan` document, estimate from the status.
+- Tool for agents `report_progress` (`issue`, `percent`, `note`), limited to their own tasks and their reports' tasks.
+- Handoff history in the plugin state (last 300 entries per company): paths, bounces, statistics.
+- Stable colours per parent task.
+- Per-company settings: `sleepAfterMinutes`, `keepClosedHours`, `enableSimulation`.
+- Live updates via polling (`events` every 3 s with a cursor, `snapshot` on demand, `refresh` every 60 s); the stream is ready for when Paperclip wires it up.
+- Actions `ping` (test event) and `refresh`.
+- Light and dark theme, phone layout, `prefers-reduced-motion`.
+- Visual test bench with screenshots (`npm run test:ui`).
+- Documentation in `docs/`.
 
-- Versione minima per verificare eventi e streaming.
-- Worker che ascolta `issue.created`, `issue.updated`, `agent.run.started/finished/failed` e li trasforma in un feed di passaggi di mano, cambi di stato e run, con nomi e titoli.
-- Feed degli ultimi 100 eventi per company nello stato del plugin (chiave `recent-feed`), data key `recent`, azione `ping`.
-- Pagina `org-flow` con il feed e link nella barra laterale.
-- Prototipo statico, contratto dati e specifica della 1.0.
+### Changed
 
-Con questa versione si è verificato che lo stream dei plugin non è collegato dall'host (501): vedi [docs/decisioni.md](docs/decisioni.md).
+- The feed is saved under the `feed` key (previously `recent-feed`, which is still read if `feed` is empty).
+- New capabilities: `issue.subtree.read`, `issue.documents.read`, `agent.tools.register`, `ui.dashboardWidget.register`. On update Paperclip may ask to approve them.
+
+## [0.1.0] - 2026-11-19
+
+### Added
+
+- Minimal version to verify events and streaming.
+- Worker that listens to `issue.created`, `issue.updated`, `agent.run.started/finished/failed` and turns them into a feed of handoffs, status changes and runs, with names and titles.
+- Feed of the last 100 events per company in the plugin state (key `recent-feed`), data key `recent`, action `ping`.
+- `org-flow` page with the feed and a link in the sidebar.
+- Static prototype and data contract.
+
+With this version it was verified that the plugins' stream is not wired up by the host (501): see [docs/design-decisions.md](docs/design-decisions.md).

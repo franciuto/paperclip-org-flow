@@ -62,7 +62,7 @@ describe("deriveSnapshot", () => {
     expect(s.counts.open).toBe(3);
     expect(s.counts.closed24h).toBe(1);
     const dev = s.people.find((p) => p.id === "dev")!;
-    expect(dev).toMatchObject({ reportsTo: "lead", state: "idle", stateLabel: "2 task da fare", activeTaskId: "c2" });
+    expect(dev).toMatchObject({ reportsTo: "lead", state: "idle", stateLabel: "2 tasks to do", activeTaskId: "c2" });
   });
 
   it("children of an unreadable (deleted) parent become standalone", () => {
@@ -119,7 +119,7 @@ describe("deriveSnapshot", () => {
     const s = deriveSnapshot(input(base));
     expect(s.people.map((p) => p.id).sort()).toEqual(["gone", "kid"]);
     expect(s.people.find((p) => p.id === "kid")!.reportsTo).toBeNull();
-    expect(s.people.find((p) => p.id === "gone")!.stateLabel).toBe("Non più attivo");
+    expect(s.people.find((p) => p.id === "gone")!.stateLabel).toBe("No longer active");
   });
 
   it("uses reported progress and the plan checklist", () => {
@@ -142,7 +142,7 @@ describe("deriveSnapshot", () => {
       ],
     });
     const s = deriveSnapshot(input(base, { runs: { active: { a: { runId: "r", issueId: "t1", startedAt: ago(30) } }, last: {} } }));
-    expect(s.people.find((p) => p.id === "a")).toMatchObject({ state: "working", stateLabel: "Lavora su T1 · 40%" });
+    expect(s.people.find((p) => p.id === "a")).toMatchObject({ state: "working", stateLabel: "Working on T1 · 40%" });
     expect(s.people.find((p) => p.id === "b")!.state).toBe("working");
     const s2 = deriveSnapshot(input(base, { runs: { active: {}, last: { b: { at: ago(100), failed: false, issueId: "t2" } } } }));
     expect(s2.people.find((p) => p.id === "b")!.state).toBe("idle");
@@ -153,7 +153,7 @@ describe("deriveSnapshot", () => {
     const s = deriveSnapshot(input(base, {
       feed: [{ id: "f", at: ago(60), kind: "run_failed", actor: { kind: "agent", id: "a" }, issueId: null }],
     }));
-    expect(s.people[0]).toMatchObject({ state: "confused", stateLabel: "Run fallito" });
+    expect(s.people[0]).toMatchObject({ state: "confused", stateLabel: "Run failed" });
   });
 
   it("presence: idle agent without activity becomes sleepy; journeys and bounces from history", () => {
@@ -220,7 +220,7 @@ describe("host mappers", () => {
   });
   it("maps issues with closedAt and a running active run", () => {
     const i = toIssueLite({
-      id: "i", identifier: "FRA-1", title: "T", status: "done", completedAt: new Date(NOW), updatedAt: new Date(NOW),
+      id: "i", identifier: "ACME-1", title: "T", status: "done", completedAt: new Date(NOW), updatedAt: new Date(NOW),
       createdAt: new Date(NOW - 1000), activeRun: { agentId: "a", status: "queued" },
     })!;
     expect(i).toMatchObject({ closedAt: ago(0), activeRun: null });

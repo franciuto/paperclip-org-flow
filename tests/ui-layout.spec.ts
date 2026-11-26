@@ -69,7 +69,7 @@ describe("layoutOrg", () => {
     assertNoOverlap(l);
   });
 
-  it("does not link detached roots (the 'Altri' bucket) to the users row", () => {
+  it("does not link detached roots (the 'Others' bucket) to the users row", () => {
     const l = layoutOrg([user("u1"), agent("a", null), { ...agent("x", null, 1), detached: true }], 80);
     const e = l.edges.find((x) => x.key === "e:users")!;
     expect(e.d).toContain(`M${Math.round(l.nodes.a!.x * 10) / 10} `);
@@ -91,7 +91,7 @@ describe("layoutOrg", () => {
   });
 
   it("sizes columns from the chips so neighbours never overlap", () => {
-    const chipW = chipWidthFor(["FRA-1234"]);
+    const chipW = chipWidthFor(["ACME-1234"]);
     const people = [agent("m", null), ...["a", "b", "c", "d"].map((k) => agent(k, "m", 4))];
     const l = layoutOrg(people, chipW);
     for (const k of ["a", "b", "c", "d"]) expect(l.nodes[k]!.width).toBeGreaterThanOrEqual(2 * chipW + CHIP_GAP);
@@ -162,13 +162,13 @@ describe("placeChips", () => {
   });
 
   it("chip width grows with the identifier length and is capped", () => {
-    expect(chipWidthFor(["FRA-1"])).toBeLessThan(chipWidthFor(["PROJECT-12345"]));
+    expect(chipWidthFor(["ACME-1"])).toBeLessThan(chipWidthFor(["PROJECT-12345"]));
     expect(chipWidthFor(["X".repeat(80)])).toBeLessThanOrEqual(MAX_CHIP_W);
   });
 
   it("code and '100%' never overlap with real monospace advances (0.60–0.62 em, bold percent)", () => {
     for (const em of [0.6, 0.61, 0.62]) {
-      for (const code of ["FRA-56", "FRA-1234", "PROJ-12345", "SIM-7"]) {
+      for (const code of ["ACME-56", "ACME-1234", "PROJ-12345", "SIM-7"]) {
         const w = chipWidthFor([code]);
         const codeEnd = CHIP_CODE_X + code.length * CHIP_FONT * em;
         const pctStart = w - CHIP_PAD_R - 4 * CHIP_FONT * em * 1.04;

@@ -55,11 +55,11 @@ describe("org-flow worker", () => {
         agent("ag-old", "Vecchio", { status: "terminated" }),
       ] as never,
       issues: [
-        issue("p1", { title: "Newsletter di dicembre", status: "in_progress", assigneeAgentId: "ag-giulia" }),
-        issue("fra-34", { title: "Logo per la newsletter", parentId: "p1", assigneeAgentId: "ag-giulia" }),
-        issue("fra-35", { parentId: "p1", status: "done", assigneeAgentId: "ag-sofia", completedAt: iso(3_600_000) }),
-        issue("fra-36", { parentId: "p1", status: "cancelled", cancelledAt: iso(60_000) }),
-        issue("fra-40", { status: "in_review", assigneeUserId: "user-1" }),
+        issue("p1", { title: "December newsletter", status: "in_progress", assigneeAgentId: "ag-giulia" }),
+        issue("acme-34", { title: "Logo for the newsletter", parentId: "p1", assigneeAgentId: "ag-giulia" }),
+        issue("acme-35", { parentId: "p1", status: "done", assigneeAgentId: "ag-sofia", completedAt: iso(3_600_000) }),
+        issue("acme-36", { parentId: "p1", status: "cancelled", cancelledAt: iso(60_000) }),
+        issue("acme-40", { status: "in_review", assigneeUserId: "user-1" }),
         issue("orphan", { parentId: "deleted-parent", assigneeAgentId: "ag-sofia" }),
       ] as never,
     });
@@ -77,9 +77,9 @@ describe("org-flow worker", () => {
     const giulia = s.people.find((p) => p.id === "ag-giulia")!;
     expect(giulia).toMatchObject({ reportsTo: "ag-laura", paletteId: "cherry-pop", agentStatus: "idle" });
     const board = s.people.find((p) => p.id === "user:user-1")!;
-    expect(board).toMatchObject({ kind: "user", name: "Board", state: "waiting", stateLabel: "Da gestire: FRA-40" });
+    expect(board).toMatchObject({ kind: "user", name: "Board", state: "waiting", stateLabel: "To handle: ACME-40" });
     const group = s.groups.find((g) => g.id === "p1")!;
-    expect(group).toMatchObject({ title: "Newsletter di dicembre", childrenTotal: 2, childrenDone: 1, progress: 50 });
+    expect(group).toMatchObject({ title: "December newsletter", childrenTotal: 2, childrenDone: 1, progress: 50 });
     expect(s.tasks.find((t) => t.id === "orphan")).toMatchObject({ groupId: "standalone", parentId: null });
     expect(s.tasks.find((t) => t.id === "p1")).toMatchObject({ groupId: "p1", progressSource: "children" });
     expect(s.settings).toEqual({ sleepAfterMinutes: 15, keepClosedHours: 24, enableSimulation: true, departmentNames: [] });
@@ -91,17 +91,17 @@ describe("org-flow worker", () => {
   });
 
   it("streams a handoff immediately, then a debounced snapshot", async () => {
-    ctx.harness.seed({ issues: [issue("fra-34", { title: "Logo per la newsletter", parentId: "p1", assigneeAgentId: "ag-sofia", updatedAt: iso() })] as never });
+    ctx.harness.seed({ issues: [issue("acme-34", { title: "Logo for the newsletter", parentId: "p1", assigneeAgentId: "ag-sofia", updatedAt: iso() })] as never });
     await ctx.harness.emit("issue.updated", {
-      identifier: "FRA-34",
+      identifier: "ACME-34",
       changes: { assigneeAgentId: { from: "ag-giulia", to: "ag-sofia" }, status: { from: "todo", to: "in_progress" } },
-    }, { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "ev-1", actorType: "agent", actorId: "ag-giulia", occurredAt: iso() });
+    }, { companyId: CO, entityId: "acme-34", entityType: "issue", eventId: "ev-1", actorType: "agent", actorId: "ag-giulia", occurredAt: iso() });
 
     expect(ctx.emitted).toHaveLength(1);
     const rec = events(ctx.emitted)[0];
     expect(ctx.emitted[0]).toMatchObject({ channel: STREAM_CHANNEL, company: CO });
     expect(rec).toMatchObject({
-      kind: "handoff", identifier: "FRA-34", title: "Logo per la newsletter", parentId: "p1",
+      kind: "handoff", identifier: "ACME-34", title: "Logo for the newsletter", parentId: "p1",
       from: { kind: "agent", id: "ag-giulia", name: "Giulia Bennett" }, to: { kind: "agent", id: "ag-sofia", name: "Sofia Carter" },
     });
 
@@ -109,8 +109,8 @@ describe("org-flow worker", () => {
     const snaps = snapshots(ctx.emitted);
     expect(snaps).toHaveLength(1);
     const sofia = snaps[0].people.find((p) => p.id === "ag-sofia")!;
-    expect(sofia).toMatchObject({ state: "listening", stateLabel: "Ha ricevuto FRA-34" });
-    expect(snaps[0].tasks.find((t) => t.id === "fra-34")!.journey.map((j) => j.personId)).toEqual(["ag-giulia", "ag-sofia"]);
+    expect(sofia).toMatchObject({ state: "listening", stateLabel: "Received ACME-34" });
+    expect(snaps[0].tasks.find((t) => t.id === "acme-34")!.journey.map((j) => j.personId)).toEqual(["ag-giulia", "ag-sofia"]);
     expect(snaps[0].feed[0].id).toBe("ev-1");
   });
 
@@ -126,15 +126,15 @@ describe("org-flow worker", () => {
   });
 
   it("ignores irrelevant issue updates", async () => {
-    await ctx.harness.emit("issue.updated", { changes: { executionRunId: { from: null, to: "r" } } }, { companyId: CO, entityId: "fra-34", entityType: "issue" });
+    await ctx.harness.emit("issue.updated", { changes: { executionRunId: { from: null, to: "r" } } }, { companyId: CO, entityId: "acme-34", entityType: "issue" });
     await vi.advanceTimersByTimeAsync(700);
     expect(ctx.emitted).toHaveLength(0);
   });
 
   it("enriches issue.created with the assignee from the issue", async () => {
-    ctx.harness.seed({ issues: [issue("fra-50", { assigneeAgentId: "ag-sofia", createdAt: iso(), updatedAt: iso() })] as never });
-    await ctx.harness.emit("issue.created", { title: "Task fra-50", identifier: "FRA-50", status: "todo" },
-      { companyId: CO, entityId: "fra-50", entityType: "issue", eventId: "ev-c", actorType: "user", actorId: "user-1", occurredAt: iso() });
+    ctx.harness.seed({ issues: [issue("acme-50", { assigneeAgentId: "ag-sofia", createdAt: iso(), updatedAt: iso() })] as never });
+    await ctx.harness.emit("issue.created", { title: "Task acme-50", identifier: "ACME-50", status: "todo" },
+      { companyId: CO, entityId: "acme-50", entityType: "issue", eventId: "ev-c", actorType: "user", actorId: "user-1", occurredAt: iso() });
     expect(events(ctx.emitted)[0]).toMatchObject({
       kind: "created", to: { kind: "agent", id: "ag-sofia", name: "Sofia Carter" }, actor: { kind: "user", id: "user-1", name: "Board" },
     });
@@ -143,7 +143,7 @@ describe("org-flow worker", () => {
   it("never drops an event when enrichment fails", async () => {
     ctx.harness.ctx.issues.get = async () => { throw new Error("boom"); };
     await ctx.harness.emit("issue.updated", { changes: { status: { from: "todo", to: "in_progress" } } },
-      { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "ev-x" });
+      { companyId: CO, entityId: "acme-34", entityType: "issue", eventId: "ev-x" });
     expect(events(ctx.emitted).map((r) => r.id)).toEqual(["ev-x"]);
     expect(ctx.harness.logs.some((l) => l.level === "warn")).toBe(true);
   });
@@ -151,7 +151,7 @@ describe("org-flow worker", () => {
   it("tracks runs: started → working, failed → confused", async () => {
     await ctx.harness.emit("agent.run.started", { agentId: "ag-sofia", runId: "r1", issueId: "orphan" }, { companyId: CO, eventId: "run-1", occurredAt: iso() });
     let s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
-    expect(s.people.find((p) => p.id === "ag-sofia")).toMatchObject({ state: "working", stateLabel: "Lavora su ORPHAN · 5%", activeTaskId: "orphan" });
+    expect(s.people.find((p) => p.id === "ag-sofia")).toMatchObject({ state: "working", stateLabel: "Working on ORPHAN · 5%", activeTaskId: "orphan" });
     expect(s.counts.working).toBe(1);
     expect(events(ctx.emitted)[0]).toMatchObject({ kind: "run_started", identifier: "ORPHAN", actor: { name: "Sofia Carter" } });
 
@@ -205,7 +205,7 @@ describe("org-flow worker", () => {
 
   it("persists feed and history in plugin state across worker restarts", async () => {
     await ctx.harness.emit("issue.updated", { changes: { assigneeAgentId: { from: "ag-giulia", to: "ag-sofia" } } },
-      { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "ev-p", occurredAt: iso() });
+      { companyId: CO, entityId: "acme-34", entityType: "issue", eventId: "ev-p", occurredAt: iso() });
     const feed = ctx.harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "feed" }) as FeedRecord[];
     const history = ctx.harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "history" }) as unknown[];
     expect(feed.map((r) => r.id)).toEqual(["ev-p"]);
@@ -255,24 +255,24 @@ describe("org-flow worker", () => {
     await ctx.harness.emit("agent.updated", {}, { companyId: CO, entityId: "ag-laura", entityType: "agent" });
     await vi.advanceTimersByTimeAsync(700);
     const s = snapshots(ctx.emitted).at(-1)!;
-    expect(s.people.find((p) => p.id === "ag-laura")).toMatchObject({ state: "paused", stateLabel: "In pausa" });
+    expect(s.people.find((p) => p.id === "ag-laura")).toMatchObject({ state: "paused", stateLabel: "Paused" });
   });
 
   describe("report_progress tool", () => {
     it("records progress for the assignee and updates the snapshot", async () => {
       const res = await ctx.harness.executeTool<{ content?: string; error?: string; data?: unknown }>(
-        TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 60, note: "bozze pronte" }, { agentId: "ag-giulia", companyId: CO });
+        TOOL_REPORT_PROGRESS, { issue: "acme-34", percent: 60, note: "drafts ready" }, { agentId: "ag-giulia", companyId: CO });
       expect(res.error).toBeUndefined();
-      expect(res.content).toContain("FRA-34 al 60%");
-      expect(ctx.harness.getState({ scopeKind: "issue", scopeId: "fra-34", stateKey: "progress" })).toMatchObject({ percent: 60, note: "bozze pronte", agentId: "ag-giulia" });
-      expect(events(ctx.emitted)[0]).toMatchObject({ kind: "progress", percent: 60, note: "bozze pronte", identifier: "FRA-34", actor: { id: "ag-giulia", name: "Giulia Bennett" } });
+      expect(res.content).toContain("ACME-34 at 60%");
+      expect(ctx.harness.getState({ scopeKind: "issue", scopeId: "acme-34", stateKey: "progress" })).toMatchObject({ percent: 60, note: "drafts ready", agentId: "ag-giulia" });
+      expect(events(ctx.emitted)[0]).toMatchObject({ kind: "progress", percent: 60, note: "drafts ready", identifier: "ACME-34", actor: { id: "ag-giulia", name: "Giulia Bennett" } });
       const snap = snapshots(ctx.emitted).at(-1)!;
-      expect(snap.tasks.find((t) => t.id === "fra-34")).toMatchObject({ progress: 60, progressSource: "reported", progressNote: "bozze pronte" });
+      expect(snap.tasks.find((t) => t.id === "acme-34")).toMatchObject({ progress: 60, progressSource: "reported", progressNote: "drafts ready" });
     });
 
-    it("resolves identifiers (FRA-34) even when issues.get does not", async () => {
+    it("resolves identifiers (ACME-34) even when issues.get does not", async () => {
       const res = await ctx.harness.executeTool<{ content?: string; error?: string }>(
-        TOOL_REPORT_PROGRESS, { issue: "FRA-34", percent: 20 }, { agentId: "ag-giulia", companyId: CO });
+        TOOL_REPORT_PROGRESS, { issue: "ACME-34", percent: 20 }, { agentId: "ag-giulia", companyId: CO });
       expect(res.error).toBeUndefined();
     });
 
@@ -283,18 +283,18 @@ describe("org-flow worker", () => {
     });
 
     it("rejects tasks of others, closed tasks, unknown tasks and bad input", async () => {
-      const other = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 10 }, { agentId: "ag-sofia", companyId: CO });
-      expect(other.error).toContain("assegnato a Giulia Bennett");
-      const board = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "fra-40", percent: 10 }, { agentId: "ag-laura", companyId: CO });
+      const other = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "acme-34", percent: 10 }, { agentId: "ag-sofia", companyId: CO });
+      expect(other.error).toContain("assigned to Giulia Bennett");
+      const board = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "acme-40", percent: 10 }, { agentId: "ag-laura", companyId: CO });
       expect(board.error).toContain("board");
-      const closed = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "fra-35", percent: 10 }, { agentId: "ag-sofia", companyId: CO });
-      expect(closed.error).toContain("già chiuso");
-      const missing = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "FRA-999", percent: 10 }, { agentId: "ag-sofia", companyId: CO });
-      expect(missing.error).toContain("non trovato");
-      const bad = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 150 }, { agentId: "ag-giulia", companyId: CO });
-      expect(bad.error).toContain("0 e 100");
-      const foreign = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 10 }, { agentId: "ag-giulia", companyId: CO2 });
-      expect(foreign.error).toContain("non trovato");
+      const closed = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "acme-35", percent: 10 }, { agentId: "ag-sofia", companyId: CO });
+      expect(closed.error).toContain("already closed");
+      const missing = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "ACME-999", percent: 10 }, { agentId: "ag-sofia", companyId: CO });
+      expect(missing.error).toContain("not found");
+      const bad = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "acme-34", percent: 150 }, { agentId: "ag-giulia", companyId: CO });
+      expect(bad.error).toContain("between 0 and 100");
+      const foreign = await ctx.harness.executeTool<{ error?: string }>(TOOL_REPORT_PROGRESS, { issue: "acme-34", percent: 10 }, { agentId: "ag-giulia", companyId: CO2 });
+      expect(foreign.error).toContain("not found");
       expect(events(ctx.emitted)).toHaveLength(0);
     });
   });
@@ -305,16 +305,16 @@ describe("org-flow worker", () => {
     it("an open parent whose children closed long ago keeps its group and children progress; hidden children do not count", async () => {
       ctx.harness.seed({
         issues: [
-          issue("fra-6", { status: "in_progress", assigneeAgentId: "ag-laura" }),
-          issue("c-old1", { parentId: "fra-6", status: "done", completedAt: iso(48 * H) }),
-          issue("c-old2", { parentId: "fra-6", status: "todo", hiddenAt: iso(48 * H) }),
-          issue("c-old3", { parentId: "fra-6", status: "cancelled", cancelledAt: iso(48 * H) }),
+          issue("acme-6", { status: "in_progress", assigneeAgentId: "ag-laura" }),
+          issue("c-old1", { parentId: "acme-6", status: "done", completedAt: iso(48 * H) }),
+          issue("c-old2", { parentId: "acme-6", status: "todo", hiddenAt: iso(48 * H) }),
+          issue("c-old3", { parentId: "acme-6", status: "cancelled", cancelledAt: iso(48 * H) }),
         ] as never,
       });
       const s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
       expect(s.tasks.map((t) => t.id)).not.toContain("c-old1");
-      expect(s.tasks.find((t) => t.id === "fra-6")).toMatchObject({ groupId: "fra-6", progressSource: "children", progress: 100 });
-      expect(s.groups.find((g) => g.id === "fra-6")).toMatchObject({ childrenTotal: 1, childrenDone: 1 });
+      expect(s.tasks.find((t) => t.id === "acme-6")).toMatchObject({ groupId: "acme-6", progressSource: "children", progress: 100 });
+      expect(s.groups.find((g) => g.id === "acme-6")).toMatchObject({ childrenTotal: 1, childrenDone: 1 });
     });
 
     it("run events refresh issue statuses with the debounced snapshot (no activity event for checkout)", async () => {
@@ -344,38 +344,38 @@ describe("org-flow worker", () => {
     });
 
     it("status-only changes use the holder of the freshly fetched issue (cold worker)", async () => {
-      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "done", assigneeAgentId: "ag-giulia", completedAt: iso(), updatedAt: iso() })] as never });
+      ctx.harness.seed({ issues: [issue("acme-34", { parentId: "p1", status: "done", assigneeAgentId: "ag-giulia", completedAt: iso(), updatedAt: iso() })] as never });
       await ctx.harness.emit("issue.updated", { changes: { status: { from: "in_progress", to: "done" } } },
-        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "st", occurredAt: iso() });
+        { companyId: CO, entityId: "acme-34", entityType: "issue", eventId: "st", occurredAt: iso() });
       const history = ctx.harness.getState({ scopeKind: "company", scopeId: CO, stateKey: "history" }) as Array<{ holderId: string }>;
       expect(history[0].holderId).toBe("ag-giulia");
       await vi.advanceTimersByTimeAsync(700);
-      expect(snapshots(ctx.emitted).at(-1)!.people.find((p) => p.id === "ag-giulia")).toMatchObject({ state: "success", stateLabel: "Ha chiuso FRA-34" });
+      expect(snapshots(ctx.emitted).at(-1)!.people.find((p) => p.id === "ag-giulia")).toMatchObject({ state: "success", stateLabel: "Closed ACME-34" });
     });
 
     it("reported progress is reset when the task moves to someone else, kept on status changes", async () => {
-      await ctx.harness.executeTool(TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 70 }, { agentId: "ag-giulia", companyId: CO });
-      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "in_progress", assigneeAgentId: "ag-giulia", updatedAt: iso() })] as never });
+      await ctx.harness.executeTool(TOOL_REPORT_PROGRESS, { issue: "acme-34", percent: 70 }, { agentId: "ag-giulia", companyId: CO });
+      ctx.harness.seed({ issues: [issue("acme-34", { parentId: "p1", status: "in_progress", assigneeAgentId: "ag-giulia", updatedAt: iso() })] as never });
       await ctx.harness.emit("issue.updated", { changes: { status: { from: "todo", to: "in_progress" } } },
-        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "k1", occurredAt: iso() });
+        { companyId: CO, entityId: "acme-34", entityType: "issue", eventId: "k1", occurredAt: iso() });
       let s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
-      expect(s.tasks.find((t) => t.id === "fra-34")!.progressSource).toBe("reported");
+      expect(s.tasks.find((t) => t.id === "acme-34")!.progressSource).toBe("reported");
 
-      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "todo", assigneeAgentId: "ag-sofia", updatedAt: iso() })] as never });
+      ctx.harness.seed({ issues: [issue("acme-34", { parentId: "p1", status: "todo", assigneeAgentId: "ag-sofia", updatedAt: iso() })] as never });
       await ctx.harness.emit("issue.updated", { changes: { assigneeAgentId: { from: "ag-giulia", to: "ag-sofia" } } },
-        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "k2", occurredAt: iso() });
+        { companyId: CO, entityId: "acme-34", entityType: "issue", eventId: "k2", occurredAt: iso() });
       s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
-      expect(s.tasks.find((t) => t.id === "fra-34")).toMatchObject({ progressSource: "status", progress: 5 });
-      expect(ctx.harness.getState({ scopeKind: "issue", scopeId: "fra-34", stateKey: "progress" })).toBeUndefined();
+      expect(s.tasks.find((t) => t.id === "acme-34")).toMatchObject({ progressSource: "status", progress: 5 });
+      expect(ctx.harness.getState({ scopeKind: "issue", scopeId: "acme-34", stateKey: "progress" })).toBeUndefined();
     });
 
     it("reported progress is reset when a closed task is reopened", async () => {
-      await ctx.harness.executeTool(TOOL_REPORT_PROGRESS, { issue: "fra-34", percent: 90 }, { agentId: "ag-giulia", companyId: CO });
-      ctx.harness.seed({ issues: [issue("fra-34", { parentId: "p1", status: "todo", assigneeAgentId: "ag-giulia", updatedAt: iso() })] as never });
+      await ctx.harness.executeTool(TOOL_REPORT_PROGRESS, { issue: "acme-34", percent: 90 }, { agentId: "ag-giulia", companyId: CO });
+      ctx.harness.seed({ issues: [issue("acme-34", { parentId: "p1", status: "todo", assigneeAgentId: "ag-giulia", updatedAt: iso() })] as never });
       await ctx.harness.emit("issue.updated", { changes: { status: { from: "done", to: "todo" } } },
-        { companyId: CO, entityId: "fra-34", entityType: "issue", eventId: "re", occurredAt: iso() });
+        { companyId: CO, entityId: "acme-34", entityType: "issue", eventId: "re", occurredAt: iso() });
       const s = await ctx.harness.getData<Snapshot>(DATA_SNAPSHOT, { companyId: CO });
-      expect(s.tasks.find((t) => t.id === "fra-34")!.progressSource).toBe("status");
+      expect(s.tasks.find((t) => t.id === "acme-34")!.progressSource).toBe("status");
     });
   });
 

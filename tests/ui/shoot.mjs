@@ -33,12 +33,12 @@ await esbuild.build({
 const CAPTURES = [
   { name: "busy-light", q: "fixture=busy", size: "1440,1300" },
   { name: "busy-dark", q: "fixture=busy&dark=1", size: "1440,1300" },
-  { name: "busy-selected-task", q: "fixture=busy&select=FRA-59&script=0", size: "1440,1300" },
+  { name: "busy-selected-task", q: "fixture=busy&select=ACME-59&script=0", size: "1440,1300" },
   { name: "busy-selected-person", q: "fixture=busy&select=person:Daniel&script=0&dark=1", size: "1440,1300" },
   { name: "quiet-light", q: "fixture=quiet", size: "1440,1300" },
   { name: "quiet-dark", q: "fixture=quiet&dark=1", size: "1440,1300" },
   { name: "phone", q: "fixture=busy", size: "400,900" },
-  { name: "phone-sheet", q: "fixture=busy&select=FRA-59&script=0", size: "400,900" },
+  { name: "phone-sheet", q: "fixture=busy&select=ACME-59&script=0", size: "400,900" },
   { name: "phone-sections", q: "fixture=busy&compact=1", size: "400,2000" },
   { name: "busy-sections", q: "fixture=busy&compact=1&collapse=kpi", size: "1440,1500" },
   { name: "quiet-sections", q: "fixture=quiet&compact=1&dark=1", size: "1440,1400" },
@@ -63,7 +63,7 @@ const CAPTURES = [
 const only = process.argv.slice(2);
 const chromium = ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"].find((p) => existsSync(p));
 if (!chromium) {
-  console.error("Chromium non trovato");
+  console.error("Chromium not found");
   process.exit(1);
 }
 

@@ -8,7 +8,7 @@ const manifest: PaperclipPluginManifestV1 = {
   version: "1.2.0",
   displayName: "Org Flow",
   description:
-    "Organigramma live della company: chi sta lavorando a cosa, avanzamento dei task raggruppati per task padre, passaggi di mano animati e feed di attività. Include lo strumento report_progress per gli agenti.",
+    "Live org chart of the company: who is working on what, progress of tasks grouped by parent task, animated handoffs and an activity feed. Includes the report_progress tool for agents.",
   author: "franciuto",
   categories: ["ui"],
   capabilities: [

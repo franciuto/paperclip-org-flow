@@ -29,13 +29,13 @@ describe("resolveParty", () => {
 describe("effectsOfRecord", () => {
   it("a handoff flies the chip and makes the receiver listen after landing", () => {
     const fx = effectsOfRecord(
-      rec({ issueId: "iss-62", identifier: "FRA-62", from: { kind: "agent", id: IDS.jamal }, to: { kind: "agent", id: IDS.giulia }, statusFrom: "todo", statusTo: "todo" }),
+      rec({ issueId: "iss-62", identifier: "ACME-62", from: { kind: "agent", id: IDS.jamal }, to: { kind: "agent", id: IDS.giulia }, statusFrom: "todo", statusTo: "todo" }),
       snap.people, snap.tasks, NOW,
     );
     expect(fx.flight).toEqual({ taskId: "iss-62", fromId: IDS.jamal, toId: IDS.giulia });
     expect(fx.override).toMatchObject({ taskId: "iss-62", holderId: IDS.giulia, status: "todo" });
     expect(fx.flashes).toEqual([expect.objectContaining({ personId: IDS.giulia, state: "listening", from: NOW + FLIGHT_MS })]);
-    expect(fx.flashes[0]!.label).toContain("FRA-62");
+    expect(fx.flashes[0]!.label).toContain("ACME-62");
   });
 
   it("a send-back from review makes the receiver confused", () => {
@@ -46,17 +46,17 @@ describe("effectsOfRecord", () => {
     expect(fx.flashes[0]).toMatchObject({ personId: IDS.giulia, state: "confused", from: NOW });
   });
 
-  it("only worker-defined regressions count as 'Rimandato' (not parking in backlog/blocked)", () => {
+  it("only worker-defined regressions count as 'Sent back' (not parking in backlog/blocked)", () => {
     const people = snap.people;
     const parked = effectsOfRecord(rec({ issueId: "iss-57", from: { kind: "agent", id: IDS.laura }, to: { kind: "agent", id: IDS.giulia }, statusFrom: "in_review", statusTo: "backlog" }), people, snap.tasks, NOW, 0);
-    expect(parked.flashes[0]).toMatchObject({ state: "listening", label: "Ha ricevuto FRA-57" });
+    expect(parked.flashes[0]).toMatchObject({ state: "listening", label: "Received ACME-57" });
     const reopened = effectsOfRecord(rec({ kind: "status", issueId: "iss-65", actor: { kind: "agent", id: IDS.joe }, statusFrom: "done", statusTo: "todo" }), people, snap.tasks, NOW, 0);
-    expect(reopened.flashes[0]).toMatchObject({ personId: IDS.joe, state: "confused", label: "Rimandato: FRA-65" });
+    expect(reopened.flashes[0]).toMatchObject({ personId: IDS.joe, state: "confused", label: "Sent back: ACME-65" });
   });
 
   it("a handoff to a board user shows 'waiting' instead of an agent pose", () => {
     const fx = effectsOfRecord(rec({ issueId: "iss-58", from: { kind: "agent", id: IDS.daniel }, to: { kind: "user", id: "board-1" }, statusTo: "blocked" }), snap.people, snap.tasks, NOW);
-    expect(fx.flashes[0]).toMatchObject({ personId: IDS.board, state: "waiting", label: "Da gestire: FRA-58" });
+    expect(fx.flashes[0]).toMatchObject({ personId: IDS.board, state: "waiting", label: "To handle: ACME-58" });
     expect(fx.flight?.toId).toBe(IDS.board);
   });
 
@@ -100,13 +100,13 @@ describe("effectsOfRecord", () => {
 
 describe("flashes", () => {
   it("apply only while active and are replaced by newer ones", () => {
-    const a = { personId: IDS.joe, state: "listening" as const, label: "Ha ricevuto FRA-1", from: NOW, until: NOW + 4000 };
-    const b = { personId: IDS.joe, state: "success" as const, label: "Fatto!", from: NOW + 1000, until: NOW + 5000 };
+    const a = { personId: IDS.joe, state: "listening" as const, label: "Received ACME-1", from: NOW, until: NOW + 4000 };
+    const b = { personId: IDS.joe, state: "success" as const, label: "Done!", from: NOW + 1000, until: NOW + 5000 };
     const list = mergeFlashes([a], [b], NOW + 1000);
     expect(list).toEqual([b]);
     expect(activeFlash(list, IDS.joe, NOW + 500)).toBeNull();
     const people = applyFlashes(snap.people, list, NOW + 2000);
-    expect(people.find((p) => p.id === IDS.joe)).toMatchObject({ state: "success", stateLabel: "Fatto!" });
+    expect(people.find((p) => p.id === IDS.joe)).toMatchObject({ state: "success", stateLabel: "Done!" });
     expect(applyFlashes(snap.people, list, NOW + 6000).find((p) => p.id === IDS.joe)!.state).toBe("sleepy");
     expect(nextFlashChange(list, NOW)).toBe(NOW + 1000);
     expect(nextFlashChange(list, NOW + 9000)).toBeNull();

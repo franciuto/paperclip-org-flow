@@ -8,11 +8,11 @@ export const NOTE_MAX = 200;
 
 export const REPORT_PROGRESS_TOOL = {
   name: TOOL_REPORT_PROGRESS,
-  displayName: "Riporta avanzamento",
+  displayName: "Report progress",
   description:
-    "Comunica al board la percentuale di completamento di un task che hai in carico; compare subito nell'organigramma live di Org Flow. " +
-    "Chiamalo quando completi un passo significativo (indicativamente ogni 20-25%) o quando la tua stima cambia, con una nota breve su cosa hai fatto o cosa manca. " +
-    "Vale solo per task assegnati a te (o ai tuoi sottoposti). Non cambia lo stato del task in Paperclip: per chiuderlo usa il normale cambio di stato, non serve riportare 100%.",
+    "Tells the board the completion percentage of a task you own; it shows up immediately in the live Org Flow org chart. " +
+    "Call it when you complete a significant step (roughly every 20-25%) or when your estimate changes, with a short note on what you did or what is left. " +
+    "Only valid for tasks assigned to you (or to your subordinates). It does not change the task status in Paperclip: to close it use the normal status change, there is no need to report 100%.",
   parametersSchema: {
     type: "object",
     additionalProperties: false,
@@ -20,19 +20,19 @@ export const REPORT_PROGRESS_TOOL = {
     properties: {
       issue: {
         type: "string",
-        description: "Il task: identificatore come FRA-62 oppure id (UUID).",
+        description: "The task: an identifier such as ACME-62, or an id (UUID).",
         minLength: 1,
       },
       percent: {
         type: "integer",
         minimum: 0,
         maximum: 100,
-        description: "Percentuale di completamento stimata, da 0 a 100.",
+        description: "Estimated completion percentage, from 0 to 100.",
       },
       note: {
         type: "string",
         maxLength: NOTE_MAX,
-        description: "Facoltativa, max 200 caratteri: cosa è stato fatto o cosa manca.",
+        description: "Optional, max 200 characters: what was done or what is left.",
       },
     },
   },
@@ -45,26 +45,26 @@ export type ParseResult = { ok: true; value: ReportProgressParams } | { ok: fals
 /** Validates the raw tool parameters. Accepts numeric strings for `percent` (agents sometimes quote numbers). */
 export function parseReportProgressParams(raw: unknown): ParseResult {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return { ok: false, error: "Parametri mancanti: servono issue (es. FRA-62) e percent (0-100)." };
+    return { ok: false, error: "Missing parameters: issue (e.g. ACME-62) and percent (0-100) are required." };
   }
   const p = raw as Record<string, unknown>;
   const issue = typeof p.issue === "string" ? p.issue.trim() : "";
-  if (!issue) return { ok: false, error: "Parametro issue mancante: indica l'identificatore del task (es. FRA-62) o il suo id." };
+  if (!issue) return { ok: false, error: "Missing issue parameter: give the task identifier (e.g. ACME-62) or its id." };
 
   const rawPercent = typeof p.percent === "string" && p.percent.trim() !== "" ? Number(p.percent.trim().replace(/%$/, "")) : p.percent;
   if (typeof rawPercent !== "number" || !Number.isFinite(rawPercent)) {
-    return { ok: false, error: "Parametro percent non valido: deve essere un numero da 0 a 100." };
+    return { ok: false, error: "Invalid percent parameter: it must be a number from 0 to 100." };
   }
   if (rawPercent < 0 || rawPercent > 100) {
-    return { ok: false, error: `Parametro percent fuori intervallo (${rawPercent}): deve essere tra 0 e 100.` };
+    return { ok: false, error: `Percent parameter out of range (${rawPercent}): it must be between 0 and 100.` };
   }
 
   let note: string | null = null;
   if (p.note !== undefined && p.note !== null) {
-    if (typeof p.note !== "string") return { ok: false, error: "Parametro note non valido: deve essere un testo." };
+    if (typeof p.note !== "string") return { ok: false, error: "Invalid note parameter: it must be text." };
     const trimmed = p.note.trim();
     if (trimmed.length > NOTE_MAX) {
-      return { ok: false, error: `La nota è troppo lunga (${trimmed.length} caratteri): massimo ${NOTE_MAX}.` };
+      return { ok: false, error: `The note is too long (${trimmed.length} characters): maximum ${NOTE_MAX}.` };
     }
     note = trimmed || null;
   }

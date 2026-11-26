@@ -74,7 +74,7 @@ export function toAgentLite(raw: unknown): AgentLite | null {
   const appearance = (a.appearance && typeof a.appearance === "object" ? a.appearance : {}) as Dict;
   return {
     id,
-    name: str(a.name) ?? "Agente",
+    name: str(a.name) ?? "Agent",
     // Title as set in Paperclip; if missing, Paperclip's own label for the role (e.g. ceo → "CEO").
     title: str(a.title) ?? roleLabel(str(a.role)),
     role: str(a.role),
@@ -102,7 +102,7 @@ export function toIssueLite(raw: unknown): IssueLite | null {
   return {
     id,
     identifier: str(i.identifier),
-    title: str(i.title) ?? "(senza titolo)",
+    title: str(i.title) ?? "(untitled)",
     status,
     priority: str(i.priority),
     parentId: str(i.parentId),
@@ -266,7 +266,7 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
     if (gid === STANDALONE_GROUP_ID) {
       const counts = countChildren(list.map((t) => t.status));
       groups.push({
-        id: STANDALONE_GROUP_ID, identifier: null, title: "Task singoli", color: STANDALONE_COLOR, status: null,
+        id: STANDALONE_GROUP_ID, identifier: null, title: "Standalone tasks", color: STANDALONE_COLOR, status: null,
         progress: ratioPercent(counts.done, counts.total), childrenTotal: counts.total, childrenDone: counts.done,
         holderIds: openHolders, updatedAt: lastUpdate,
       });
@@ -277,7 +277,7 @@ export function deriveSnapshot(input: DeriveInput): Snapshot {
     groups.push({
       id: gid,
       identifier: parent?.identifier ?? null,
-      title: parent?.title ?? "Task padre",
+      title: parent?.title ?? "Parent task",
       color: colorForGroup(gid),
       status: parent?.status ?? null,
       progress: parent?.status === "done" ? 100 : ratioPercent(counts.done, counts.total),

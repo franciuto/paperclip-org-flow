@@ -21,43 +21,43 @@ import { busySnapshot, IDS, quietSnapshot } from "./ui/fixtures.js";
 const NOW = Date.parse("2026-11-19T15:00:00Z");
 
 describe("format", () => {
-  it("formats durations in Italian", () => {
-    expect(formatDuration(20_000)).toBe("meno di 1 min");
+  it("formats durations in English", () => {
+    expect(formatDuration(20_000)).toBe("less than 1 min");
     expect(formatDuration(7 * 60_000)).toBe("7 min");
     expect(formatDuration(125 * 60_000)).toBe("2 h 5 min");
     expect(formatDuration(120 * 60_000)).toBe("2 h");
-    expect(formatDuration(26 * 3600_000)).toBe("1 g 2 h");
+    expect(formatDuration(26 * 3600_000)).toBe("1 d 2 h");
   });
 
   it("formats relative times", () => {
     const at = (ms: number) => new Date(NOW - ms).toISOString();
-    expect(relativeTime(at(10_000), NOW)).toBe("adesso");
-    expect(relativeTime(at(5 * 60_000), NOW)).toBe("5 min fa");
-    expect(relativeTime(at(3 * 3600_000), NOW)).toBe("3 h fa");
-    expect(relativeTime(at(30 * 3600_000), NOW)).toBe("ieri");
-    expect(relativeTime(at(80 * 3600_000), NOW)).toBe("3 g fa");
+    expect(relativeTime(at(10_000), NOW)).toBe("now");
+    expect(relativeTime(at(5 * 60_000), NOW)).toBe("5 min ago");
+    expect(relativeTime(at(3 * 3600_000), NOW)).toBe("3 h ago");
+    expect(relativeTime(at(30 * 3600_000), NOW)).toBe("yesterday");
+    expect(relativeTime(at(80 * 3600_000), NOW)).toBe("3 d ago");
     expect(relativeTime(null, NOW)).toBe("—");
     expect(relativeTime("not a date", NOW)).toBe("—");
   });
 
   it("labels statuses and falls back gracefully", () => {
-    expect(statusLabel("in_review")).toBe("In revisione");
+    expect(statusLabel("in_review")).toBe("In review");
     expect(statusLabel("weird_state")).toBe("weird state");
     expect(statusLabel(null)).toBe("—");
   });
 
   it("small helpers", () => {
     expect(plural(1, "task", "task")).toBe("1 task");
-    expect(plural(3, "evento", "eventi")).toBe("3 eventi");
+    expect(plural(3, "event", "events")).toBe("3 events");
     expect(firstName("Giulia Bennett")).toBe("Giulia");
     expect(initials("Arold Fletcher")).toBe("AF");
     expect(initials("Joe")).toBe("J");
     expect(clockTime(new Date(2026, 10, 19, 9, 5).toISOString())).toBe("09:05");
     expect(clampPercent(140)).toBe(100);
     expect(clampPercent(null)).toBe(0);
-    expect(naturalCompare("FRA-9", "FRA-62")).toBeLessThan(0);
+    expect(naturalCompare("ACME-9", "ACME-62")).toBeLessThan(0);
     expect(poseUrl("cherry-pop", "sleepy")).toBe("/api/agent-avatars/cap-v1/cherry-pop/sleepy.png?size=128&scale=1");
-    expect(taskCode({ identifier: null, title: "Una cosa lunga", id: "x" })).toBe("Una co…");
+    expect(taskCode({ identifier: null, title: "A long thing here", id: "x" })).toBe("A long…");
   });
 
   it("truncates text to a width estimate", () => {
@@ -74,17 +74,17 @@ describe("model", () => {
 
   it("sorts groups: open by identifier, standalone last", () => {
     const ids = sortGroups(s.groups).map((g) => g.identifier ?? g.id);
-    expect(ids[0]).toBe("FRA-50");
+    expect(ids[0]).toBe("ACME-50");
     expect(ids[ids.length - 1]).toBe("standalone");
   });
 
   it("collects held tasks per person in group order, hiding flying ones", () => {
     const order = sortGroups(s.groups).map((g) => g.id);
     const held = heldByPerson(s.tasks, order);
-    expect(held.get(IDS.daniel)!.map((t) => t.identifier)).toEqual(["FRA-58", "FRA-66", "FRA-68", "FRA-61", "FRA-67"]);
-    expect(held.get(IDS.joe)).toBeUndefined(); // FRA-65 is closed
+    expect(held.get(IDS.daniel)!.map((t) => t.identifier)).toEqual(["ACME-58", "ACME-66", "ACME-68", "ACME-61", "ACME-67"]);
+    expect(held.get(IDS.joe)).toBeUndefined(); // ACME-65 is closed
     const hidden = heldByPerson(s.tasks, order, new Set(["iss-58"]));
-    expect(hidden.get(IDS.daniel)!.map((t) => t.identifier)).not.toContain("FRA-58");
+    expect(hidden.get(IDS.daniel)!.map((t) => t.identifier)).not.toContain("ACME-58");
   });
 
   it("counts working/reviewing/sleeping agents and tasks waiting for the board", () => {
@@ -92,7 +92,7 @@ describe("model", () => {
   });
 
   it("touchedBy includes everyone on the journey", () => {
-    const t = s.tasks.find((x) => x.identifier === "FRA-59")!;
+    const t = s.tasks.find((x) => x.identifier === "ACME-59")!;
     expect([...touchedBy(t)]).toEqual(expect.arrayContaining([IDS.board, IDS.laura, IDS.jamal, IDS.arold, IDS.luke]));
     expect(touchedBy(null).size).toBe(0);
   });
@@ -100,15 +100,15 @@ describe("model", () => {
   it("quiet snapshot: no active groups, recently closed newest first", () => {
     const q = quietSnapshot(NOW);
     expect(activeGroups(q.groups)).toHaveLength(0);
-    expect(recentlyClosed(q.tasks).map((t) => t.identifier)).toEqual(["FRA-41", "FRA-42", "FRA-43", "FRA-44", "FRA-45"]);
+    expect(recentlyClosed(q.tasks).map((t) => t.identifier)).toEqual(["ACME-41", "ACME-42", "ACME-43", "ACME-44", "ACME-45"]);
   });
 
-  it("adds the sleep duration to the worker's plain 'Dorme' label", () => {
+  it("adds the sleep duration to the worker's plain 'Asleep' label", () => {
     const since = new Date(NOW - 125 * 60_000).toISOString();
-    expect(displayLabel({ state: "sleepy", stateLabel: "Dorme", stateSince: since }, NOW)).toBe("Dorme da 2 h 5 min");
-    expect(displayLabel({ state: "sleepy", stateLabel: "Dorme", stateSince: new Date(NOW - 5000).toISOString() }, NOW)).toBe("Dorme");
-    expect(displayLabel({ state: "sleepy", stateLabel: "Dorme", stateSince: null }, NOW)).toBe("Dorme");
-    expect(displayLabel({ state: "working", stateLabel: "Lavora su FRA-1 · 40%", stateSince: since }, NOW)).toBe("Lavora su FRA-1 · 40%");
+    expect(displayLabel({ state: "sleepy", stateLabel: "Asleep", stateSince: since }, NOW)).toBe("Asleep for 2 h 5 min");
+    expect(displayLabel({ state: "sleepy", stateLabel: "Asleep", stateSince: new Date(NOW - 5000).toISOString() }, NOW)).toBe("Asleep");
+    expect(displayLabel({ state: "sleepy", stateLabel: "Asleep", stateSince: null }, NOW)).toBe("Asleep");
+    expect(displayLabel({ state: "working", stateLabel: "Working on ACME-1 · 40%", stateSince: since }, NOW)).toBe("Working on ACME-1 · 40%");
   });
 
   it("statusRegression mirrors the worker's rule", () => {

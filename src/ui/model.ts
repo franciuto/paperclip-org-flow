@@ -54,7 +54,7 @@ export interface LiveCounts {
   thinking: number;
   sleepy: number;
   /**
-   * "Aspettano te": OPEN TASKS held by human users. Not the worker's `Snapshot.counts.waiting`
+   * "Waiting for you": OPEN TASKS held by human users. Not the worker's `Snapshot.counts.waiting`
    * (which counts people), hence the different name.
    */
   tasksWaitingForUsers: number;
@@ -120,8 +120,8 @@ export function connectionState(i: ConnectionInput): ConnectionState {
 
 export const CONNECTION_LABEL: Record<ConnectionState, string> = {
   live: "Live",
-  connecting: "Connessione…",
-  offline: "Non raggiungibile",
+  connecting: "Connecting…",
+  offline: "Unreachable",
 };
 
 /** Merge feed lists (any order), de-duplicated by id, newest first, capped. */
@@ -142,7 +142,7 @@ export function mergeFeed(...lists: FeedRecord[][]): FeedRecord[] {
 export const OTHERS_ID = "__of_others";
 
 /**
- * Re-assigns open tasks held by unknown people to the "Altri" bucket and returns the bucket
+ * Re-assigns open tasks held by unknown people to the "Others" bucket and returns the bucket
  * person (null when not needed), so no open task is ever invisible.
  */
 export function bucketUnknownHolders(tasks: TaskView[], people: PersonView[]): { tasks: TaskView[]; others: PersonView | null } {
@@ -157,15 +157,15 @@ export function bucketUnknownHolders(tasks: TaskView[], people: PersonView[]): {
   const others: PersonView = {
     id: OTHERS_ID,
     kind: "agent",
-    name: "Altri",
-    title: "Assegnatari fuori dall'organigramma",
+    name: "Others",
+    title: "Assignees outside the org chart",
     role: null,
     reportsTo: null,
     paletteId: null,
     customAvatarUrl: null,
     agentStatus: null,
     state: "idle",
-    stateLabel: n === 1 ? "1 task" : `${n} task`,
+    stateLabel: n === 1 ? "1 task" : `${n} tasks`,
     stateSince: null,
     activeTaskId: null,
     lastActivityAt: null,
@@ -175,13 +175,13 @@ export function bucketUnknownHolders(tasks: TaskView[], people: PersonView[]): {
 }
 
 /**
- * Label shown under a person. The worker says just "Dorme"; the UI adds how long, from
- * `stateSince`, so the quiet state reads as alive ("Dorme da 2 h").
+ * Label shown under a person. The worker says just "Asleep"; the UI adds how long, from
+ * `stateSince`, so the quiet state reads as alive ("Asleep for 2 h").
  */
 export function displayLabel(p: Pick<PersonView, "state" | "stateLabel" | "stateSince">, nowMs: number): string {
-  if (p.state === "sleepy" && p.stateLabel === "Dorme" && p.stateSince) {
+  if (p.state === "sleepy" && p.stateLabel === "Asleep" && p.stateSince) {
     const ms = nowMs - Date.parse(p.stateSince);
-    if (Number.isFinite(ms) && ms >= 60_000) return `Dorme da ${formatDuration(ms)}`;
+    if (Number.isFinite(ms) && ms >= 60_000) return `Asleep for ${formatDuration(ms)}`;
   }
   return p.stateLabel;
 }

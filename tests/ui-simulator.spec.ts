@@ -60,9 +60,9 @@ describe("simulator", () => {
     const { snap } = run(busySnapshot(NOW), 30);
     const working = snap.people.filter((p) => p.state === "working");
     expect(working.length).toBeGreaterThan(0);
-    for (const p of working) expect(p.stateLabel).toMatch(/^Lavora su SIM-\d+ · \d+%$/);
-    for (const p of snap.people.filter((x) => x.state === "sleepy")) expect(p.stateLabel).toBe("Dorme");
-    for (const p of snap.people.filter((x) => x.state === "thinking")) expect(p.stateLabel).toMatch(/^Revisiona SIM-\d+$/);
+    for (const p of working) expect(p.stateLabel).toMatch(/^Working on SIM-\d+ · \d+%$/);
+    for (const p of snap.people.filter((x) => x.state === "sleepy")) expect(p.stateLabel).toBe("Asleep");
+    for (const p of snap.people.filter((x) => x.state === "thinking")) expect(p.stateLabel).toMatch(/^Reviewing SIM-\d+$/);
     expect(snap.counts.working).toBe(working.length);
   });
 

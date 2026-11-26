@@ -242,7 +242,7 @@ export function personSignals(entries: HistoryEntry[], now: number, managerOf: M
         s.closed = later(s.closed, sig);
         if (recent) s.stats.closed24h += 1;
       }
-      // Whoever gets the done task back ("un suo task è stato approvato") and an agent
+      // Whoever gets the done task back ("one of their tasks was approved") and an agent
       // approving a review also get the "success" moment.
       for (const extra of [e.kind === "handoff" ? e.toId : null, e.actorId]) {
         if (!extra || extra === closer || extra.startsWith("user:")) continue;

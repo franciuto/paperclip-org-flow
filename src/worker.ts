@@ -56,13 +56,13 @@ const plugin = definePlugin({
 
     ctx.actions.register(ACTION_PING, async (params, context) => {
       const companyId = companyOf(params, context?.companyId);
-      if (!companyId) throw new Error("companyId mancante");
+      if (!companyId) throw new Error("companyId missing");
       return svc.ping(companyId);
     });
 
     ctx.actions.register(ACTION_REFRESH, async (params, context) => {
       const companyId = companyOf(params, context?.companyId);
-      if (!companyId) throw new Error("companyId mancante");
+      if (!companyId) throw new Error("companyId missing");
       return svc.refresh(companyId);
     });
 
@@ -76,11 +76,11 @@ const plugin = definePlugin({
       (params, runCtx) => svc.reportProgress(params, runCtx),
     );
 
-    ctx.logger.info("org-flow: in ascolto su task, agenti e run");
+    ctx.logger.info("org-flow: listening to tasks, agents and runs");
   },
 
   async onHealth() {
-    if (!service) return { status: "ok", message: "Org Flow in avvio" };
+    if (!service) return { status: "ok", message: "Org Flow starting" };
     return service.health();
   },
 

@@ -1,6 +1,6 @@
 /**
  * Visual harness entry: renders the three UI exports with the SDK stub.
- * Query: ?view=page|widget  &fixture=busy|quiet  &dark=1  &sim=1  &select=FRA-59 | person:<name>
+ * Query: ?view=page|widget  &fixture=busy|quiet  &dark=1  &sim=1  &select=ACME-59 | person:<name>
  */
 import { createRoot } from "react-dom/client";
 import type { TaskView } from "../../src/shared/types.js";
@@ -11,12 +11,12 @@ import { useStyles } from "../../src/ui/styles.js";
 
 const qs = new URLSearchParams(location.search);
 if (qs.get("dark") === "1") document.documentElement.classList.add("dark");
-const context = { companyId: "co-1", companyPrefix: "FRA", projectId: null, entityId: null, entityType: null, userId: "board-1" };
+const context = { companyId: "co-1", companyPrefix: "ACME", projectId: null, entityId: null, entityType: null, userId: "board-1" };
 
 /** Close-up of chips (scale 4) to check that code and percent never overlap. */
 function ChipGallery() {
   useStyles();
-  const codes = ["FRA-56", "FRA-1234", "PROJ-12345", "A-VERY-LONG-IDENTIFIER-12345"];
+  const codes = ["ACME-56", "ACME-1234", "PROJ-12345", "A-VERY-LONG-IDENTIFIER-12345"];
   const rows: Array<[string, number]> = [["in_review", 100], ["in_progress", 45], ["todo", 5], ["blocked", 55]];
   const colors = ["oklch(62% .19 300)", "oklch(63% .12 190)", "oklch(71% .15 62)", "oklch(58% .19 255)"];
   return (
@@ -41,15 +41,15 @@ function Harness() {
   if (qs.get("view") === "widget") {
     return (
       <div className="hx-dash">
-        <nav className="hx-side" aria-label="Barra laterale (finta)">
+        <nav className="hx-side" aria-label="Sidebar (fake)">
           <div className="hx-side-item">Dashboard</div>
           <div className="hx-side-item">Task</div>
-          <div className="hx-side-item">Agenti</div>
+          <div className="hx-side-item">Agents</div>
           <OrgFlowSidebarLink context={context} />
         </nav>
         <div className="hx-cards">
           <section className="hx-card"><OrgFlowDashboardWidget context={context} /></section>
-          <section className="hx-card hx-ghost">Altro riquadro della dashboard</section>
+          <section className="hx-card hx-ghost">Another dashboard widget</section>
         </div>
       </div>
     );
@@ -63,7 +63,7 @@ createRoot(document.getElementById("root")!).render(<Harness />);
 const click = (sel: string) => (document.querySelector(sel) as HTMLElement | SVGElement | null)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 if (qs.get("sim") === "1") {
   setTimeout(() => {
-    const btn = Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.includes("Simulazione"));
+    const btn = Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.includes("Simulation"));
     btn?.click();
   }, 900);
 }
@@ -77,7 +77,7 @@ if (sel) {
 
 if (qs.get("ping") === "1") {
   setTimeout(() => {
-    Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.includes("Verifica connessione"))?.click();
+    Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.includes("Check connection"))?.click();
   }, 1500);
 }
 // Short chart box so the sections below fit in a screenshot: ?compact=1

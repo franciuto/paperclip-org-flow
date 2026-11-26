@@ -3,7 +3,7 @@
  * without waiting for the next snapshot:
  * - flashes: short-lived visual state overrides on people (received → listening,
  *   done → success, sent back / failed → confused, run started → working); labels use the same
- *   Italian wording as the worker (src/worker/presence.ts) so a flash and the following snapshot
+ *   English wording as the worker (src/worker/presence.ts) so a flash and the following snapshot
  *   say the same thing;
  * - task overrides: the task jumps to its new holder / status / percent until a snapshot
  *   generated after the event replaces it;
@@ -83,7 +83,7 @@ export function effectsOfRecord(
 ): RecordEffects {
   const out: RecordEffects = { flashes: [], override: null, flight: null };
   const task = findTask(rec, tasks);
-  const code = rec.identifier ?? task?.identifier ?? "un task";
+  const code = rec.identifier ?? task?.identifier ?? "a task";
   const kindOf = (id: string) => people.find((p) => p.id === id)?.kind ?? "agent";
   const flash = (personId: string | null, state: VisualState | null, label: string, delay = 0, ms = FLASH_MS) => {
     if (!personId) return;
@@ -105,10 +105,10 @@ export function effectsOfRecord(
       const flies = !!(task && fromId && toId && fromId !== toId);
       if (flies) out.flight = { taskId: task!.id, fromId: fromId!, toId: toId! };
       const delay = flies ? flightMs : 0;
-      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `Da gestire: ${code}`, delay);
-      else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(toId, "confused", `Rimandato: ${code}`, delay);
-      else if (rec.statusTo === "in_review") flash(toId, "listening", `Revisiona ${code}`, delay);
-      else flash(toId, "listening", `Ha ricevuto ${code}`, delay);
+      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `To handle: ${code}`, delay);
+      else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(toId, "confused", `Sent back: ${code}`, delay);
+      else if (rec.statusTo === "in_review") flash(toId, "listening", `Reviewing ${code}`, delay);
+      else flash(toId, "listening", `Received ${code}`, delay);
       break;
     }
     case "status": {
@@ -118,23 +118,23 @@ export function effectsOfRecord(
       }
       const holder = task?.holderId ?? resolveParty(rec.actor, people);
       if (rec.statusTo === "done") {
-        flash(holder, "success", `Ha chiuso ${code}`, 0, SUCCESS_FLASH_MS);
+        flash(holder, "success", `Closed ${code}`, 0, SUCCESS_FLASH_MS);
         const actor = resolveParty(rec.actor, people);
-        if (actor && actor !== holder) flash(actor, "success", `Ha chiuso ${code}`, 0, SUCCESS_FLASH_MS);
-      } else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(holder, "confused", `Rimandato: ${code}`);
-      else if (rec.statusTo === "blocked") flash(holder, "confused", `Bloccato: ${code}`);
-      else if (rec.statusTo === "in_review") flash(holder, "thinking", `Revisiona ${code}`);
+        if (actor && actor !== holder) flash(actor, "success", `Closed ${code}`, 0, SUCCESS_FLASH_MS);
+      } else if (isSendBack(rec.statusFrom, rec.statusTo)) flash(holder, "confused", `Sent back: ${code}`);
+      else if (rec.statusTo === "blocked") flash(holder, "confused", `Blocked: ${code}`);
+      else if (rec.statusTo === "in_review") flash(holder, "thinking", `Reviewing ${code}`);
       break;
     }
     case "created": {
       const toId = resolveParty(rec.to, people);
-      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `Da gestire: ${code}`);
-      else flash(toId, "listening", `Ha ricevuto ${code}`);
+      if (toId && kindOf(toId) === "user") flash(toId, "waiting", `To handle: ${code}`);
+      else flash(toId, "listening", `Received ${code}`);
       break;
     }
     case "run_started": {
       const id = resolveParty(rec.actor, people);
-      const label = task ? `Lavora su ${code}` : "Al lavoro";
+      const label = task ? `Working on ${code}` : "Working";
       flash(id, "working", label, 0, WORKING_FLASH_MS);
       break;
     }
@@ -142,7 +142,7 @@ export function effectsOfRecord(
       flash(resolveParty(rec.actor, people), null, "", 0, 0);
       break;
     case "run_failed":
-      flash(resolveParty(rec.actor, people), "confused", `Run fallito${task || rec.identifier ? ` · ${code}` : ""}`);
+      flash(resolveParty(rec.actor, people), "confused", `Run failed${task || rec.identifier ? ` · ${code}` : ""}`);
       break;
     case "progress": {
       if (task && rec.percent != null) {
@@ -223,36 +223,36 @@ export function applyOverrides(tasks: TaskView[], overrides: TaskOverride[]): Ta
   });
 }
 
-/** Short Italian sentence for a feed record, used in aria-labels and tests. */
+/** Short English sentence for a feed record, used in aria-labels and tests. */
 export function describeRecord(rec: FeedRecord, nameOf: (p: Party | undefined) => string): string {
   const from = nameOf(rec.from);
   const to = nameOf(rec.to);
   const actor = nameOf(rec.actor);
   switch (rec.kind) {
     case "handoff":
-      if (statusRegression(rec.statusFrom, rec.statusTo) === "reopen") return `${from} ha riaperto il task e l'ha passato a ${to}`;
-      if (isSendBack(rec.statusFrom, rec.statusTo)) return `${from} ha rimandato indietro il task a ${to}`;
-      if (rec.statusTo === "in_review") return `${from} ha passato il task a ${to} da rivedere`;
-      if (rec.statusTo === "blocked") return `${from} chiede una decisione a ${to}`;
-      return `${from} ha passato il task a ${to}`;
+      if (statusRegression(rec.statusFrom, rec.statusTo) === "reopen") return `${from} reopened the task and handed it to ${to}`;
+      if (isSendBack(rec.statusFrom, rec.statusTo)) return `${from} sent the task back to ${to}`;
+      if (rec.statusTo === "in_review") return `${from} handed the task to ${to} for review`;
+      if (rec.statusTo === "blocked") return `${from} asked ${to} for a decision`;
+      return `${from} handed the task to ${to}`;
     case "status":
-      if (rec.statusTo === "done") return `${actor} ha chiuso il task`;
-      if (statusRegression(rec.statusFrom, rec.statusTo) === "reopen") return `${actor} ha riaperto il task`;
-      if (isSendBack(rec.statusFrom, rec.statusTo)) return `${actor} ha rimandato indietro il task`;
-      return `Stato cambiato da ${actor}`;
+      if (rec.statusTo === "done") return `${actor} closed the task`;
+      if (statusRegression(rec.statusFrom, rec.statusTo) === "reopen") return `${actor} reopened the task`;
+      if (isSendBack(rec.statusFrom, rec.statusTo)) return `${actor} sent the task back`;
+      return `Status changed by ${actor}`;
     case "created":
-      return rec.to ? `Nuovo task assegnato a ${to}` : "Nuovo task";
+      return rec.to ? `New task assigned to ${to}` : "New task";
     case "run_started":
-      return `${actor} ha iniziato a lavorare`;
+      return `${actor} started working`;
     case "run_finished":
-      return `${actor} ha finito il run`;
+      return `${actor} finished the run`;
     case "run_failed":
-      return `Run di ${actor} fallito`;
+      return `${actor}'s run failed`;
     case "progress":
-      return `${actor} è al ${rec.percent ?? 0}%`;
+      return `${actor} is at ${rec.percent ?? 0}%`;
     case "ping":
-      return "Evento di prova";
+      return "Test event";
     default:
-      return "Evento";
+      return "Event";
   }
 }

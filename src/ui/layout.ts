@@ -53,7 +53,7 @@ export interface LayoutInput {
   /** Job title shown under the name (Paperclip title, or role label). */
   title?: string | null;
   chipCount: number;
-  /** Placed as a root but not linked to the users row (e.g. the "Altri" bucket). */
+  /** Placed as a root but not linked to the users row (e.g. the "Others" bucket). */
   detached?: boolean;
 }
 
@@ -137,7 +137,7 @@ export function effectiveParents(people: Array<Pick<LayoutInput, "id" | "kind" |
 
 /**
  * Departments derived from the chain of command, for workers that don't send them: the subtree
- * under each direct report of a top-level agent, named "Team di <nome>".
+ * under each direct report of a top-level agent, named "<name>'s team".
  */
 export function deriveDepartments(people: Array<Pick<LayoutInput, "id" | "kind" | "reportsTo" | "name">>): LayoutDepartment[] {
   const parent = effectiveParents(people);
@@ -149,7 +149,7 @@ export function deriveDepartments(people: Array<Pick<LayoutInput, "id" | "kind" 
     if (p.kind !== "agent" || parent.get(p.id) !== null) continue;
     for (const lead of kids.get(p.id) ?? []) {
       const name = people.find((x) => x.id === lead)?.name ?? lead;
-      out.push({ id: lead, name: `Team di ${name.trim().split(/\s+/)[0]}`, leadId: lead, memberIds: subtree(lead) });
+      out.push({ id: lead, name: `${name.trim().split(/\s+/)[0]}'s team`, leadId: lead, memberIds: subtree(lead) });
     }
   }
   return out;

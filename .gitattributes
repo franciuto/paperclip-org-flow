@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.png binary
+prototype/org-flow.html linguist-generated
+package-lock.json linguist-generated

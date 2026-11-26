@@ -298,93 +298,93 @@ body.anat-on .anat b{display:block;font-size:10.5px;letter-spacing:.06em;text-tr
 </style>
 
 <div class="shell">
-  <nav class="rail" aria-label="Navigazione di Paperclip (finta)">
+  <nav class="rail" aria-label="Paperclip navigation (mock)">
     <div class="co" aria-hidden="true">F</div>
     <a href="#" title="Dashboard" aria-label="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></a>
     <a href="#" title="Task" aria-label="Task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></a>
-    <a href="#" title="Agenti" aria-label="Agenti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg></a>
-    <a href="#" title="Organigramma" aria-label="Organigramma"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></svg></a>
+    <a href="#" title="Agents" aria-label="Agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg></a>
+    <a href="#" title="Org chart" aria-label="Org chart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></svg></a>
     <a href="#" class="on" title="Org Flow (plugin)" aria-label="Org Flow (plugin)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="19" r="2.5"/><path d="M7.5 6h9M6.5 8.2l4.2 8.6M17.5 8.2l-4.2 8.6"/></svg></a>
   </nav>
 
   <main class="page">
     <header class="region" id="r-header">
-      <div class="crumbs">franciuto.com<span>/</span>Plugin<span>/</span><b>Org Flow</b></div>
+      <div class="crumbs">Acme<span>/</span>Plugin<span>/</span><b>Org Flow</b></div>
       <div class="titlerow">
         <h1>Org Flow</h1>
         <span class="live" id="live"><i></i>Live</span>
         <span class="clock" id="clock">15:20</span>
-        <span class="tag">Prototipo · simulazione con task di esempio</span>
+        <span class="tag">Prototype · simulation with sample tasks</span>
         <div class="controls">
-          <button type="button" class="btn" id="pause" aria-pressed="false"><svg viewBox="0 0 12 12" id="pause-ic"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg><span id="pause-l">Pausa</span></button>
-          <label class="clock" for="pace">Ritmo</label>
+          <button type="button" class="btn" id="pause" aria-pressed="false"><svg viewBox="0 0 12 12" id="pause-ic"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg><span id="pause-l">Pause</span></button>
+          <label class="clock" for="pace">Pace</label>
           <select id="pace" class="sel-in">
-            <option value="1600">Calmo</option>
-            <option value="1000" selected>Normale</option>
-            <option value="420">Frenetico</option>
+            <option value="1600">Calm</option>
+            <option value="1000" selected>Normal</option>
+            <option value="420">Frantic</option>
           </select>
-          <button type="button" class="btn" id="t-anat" aria-pressed="false">Come è fatto</button>
+          <button type="button" class="btn" id="t-anat" aria-pressed="false">How it's built</button>
         </div>
       </div>
-      <p class="sub">Chi sta facendo cosa in questo momento, a che punto è ogni task e come passa da una persona all'altra. I colori sono i task padre.</p>
-      <div class="anat tr"><b>Slot <code>page</code></b>Pagina del plugin su <code>/franciuto.com/plugins/org-flow</code> (<code>ui.page.register</code>); il link nella barra laterale è uno slot <code>sidebar</code>.</div>
+      <p class="sub">Who is doing what right now, how far along each task is and how it moves from one person to another. The colours are the parent tasks.</p>
+      <div class="anat tr"><b>Slot <code>page</code></b>Plugin page at <code>/ACME/org-flow</code> (<code>ui.page.register</code>); the link in the sidebar is a <code>sidebar</code> slot.</div>
     </header>
 
-    <section class="region" id="r-parents" aria-label="Task padre aperti">
+    <section class="region" id="r-parents" aria-label="Open parent tasks">
       <div class="parents" id="parents"></div>
-      <div class="anat br"><b>Task padre</b>Raggruppamento da <code>parentId</code> (<code>issue.subtree.read</code>). Nel plugin vero la percentuale del padre è sotto-task chiusi / totali; qui è la media delle percentuali, per vederla muoversi.</div>
+      <div class="anat br"><b>Parent tasks</b>Grouping by <code>parentId</code> (<code>issue.subtree.read</code>). In the real plugin the parent's percentage is closed child tasks / total; here it is the average of the percentages, so you can see it move.</div>
     </section>
 
-    <section class="kpis region" id="r-kpi" aria-label="Adesso">
-      <div class="kpi"><img id="ki-work" alt=""><div><div class="v" id="k-work">0</div><div class="l">Al lavoro</div></div></div>
-      <div class="kpi"><img id="ki-think" alt=""><div><div class="v" id="k-think">0</div><div class="l">Rivedono</div></div></div>
-      <div class="kpi"><img id="ki-sleep" alt=""><div><div class="v" id="k-sleep">0</div><div class="l">Dormono</div></div></div>
-      <button type="button" class="kpi click" id="k-wait-b"><img id="ki-wait" alt=""><div><div class="v" id="k-wait">0</div><div class="l">Aspettano te</div></div></button>
-      <div class="anat tr"><b>Stati degli agenti</b>Base da <code>agents.read</code> (<code>running</code> → al lavoro, <code>error</code> → confuso). Il resto lo decide il plugin: rivede se ha un task in revisione, dorme se è senza task da 5 minuti.</div>
+    <section class="kpis region" id="r-kpi" aria-label="Now">
+      <div class="kpi"><img id="ki-work" alt=""><div><div class="v" id="k-work">0</div><div class="l">Working</div></div></div>
+      <div class="kpi"><img id="ki-think" alt=""><div><div class="v" id="k-think">0</div><div class="l">Reviewing</div></div></div>
+      <div class="kpi"><img id="ki-sleep" alt=""><div><div class="v" id="k-sleep">0</div><div class="l">Asleep</div></div></div>
+      <button type="button" class="kpi click" id="k-wait-b"><img id="ki-wait" alt=""><div><div class="v" id="k-wait">0</div><div class="l">Waiting on you</div></div></button>
+      <div class="anat tr"><b>Agent states</b>Base from <code>agents.read</code> (<code>running</code> → working, <code>error</code> → confused). The plugin decides the rest: reviewing if it has a task in review, asleep if it has had no tasks for 5 minutes.</div>
     </section>
 
     <div class="main">
-      <section class="stage region" id="r-canvas" aria-label="Organigramma con i task">
+      <section class="stage region" id="r-canvas" aria-label="Org chart with tasks">
         <div class="canvas-scroll">
-          <svg id="org" viewBox="0 0 1000 820" role="img" aria-label="Organigramma di franciuto.com con i task in mano a ciascuno">
+          <svg id="org" viewBox="0 0 1000 820" role="img" aria-label="Org chart of Acme with the tasks each person holds">
             <g id="g-edges"></g>
             <g id="g-nodes"></g>
             <g id="g-fly"></g>
           </svg>
         </div>
         <div class="legend">
-          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/></svg>Da fare</span>
-          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><path d="M6 1.5a4.5 4.5 0 0 1 0 9z" style="fill:var(--fg)"/></svg>In corso</span>
-          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><circle cx="6" cy="6" r="1.8" style="fill:var(--fg)"/></svg>In revisione</span>
-          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><path d="M3 9 9 3" class="glyph"/></svg>Bloccato</span>
-          <span>Il riempimento del task è la percentuale di completamento</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/></svg>To do</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><path d="M6 1.5a4.5 4.5 0 0 1 0 9z" style="fill:var(--fg)"/></svg>In progress</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><circle cx="6" cy="6" r="1.8" style="fill:var(--fg)"/></svg>In review</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" class="glyph"/><path d="M3 9 9 3" class="glyph"/></svg>Blocked</span>
+          <span>The task fill is the completion percentage</span>
         </div>
-        <div class="anat tl"><b>Organigramma e personaggi</b>Struttura da <code>GET /api/companies/:id/org</code>. I personaggi sono quelli di Paperclip: <code>/api/agent-avatars/cap-v1/&lt;palette&gt;/&lt;posa&gt;.png</code> con le pose <code>idle · listening · thinking · working · success · confused · sleepy</code>. Se l'agente ha una foto caricata si usa quella.</div>
-        <div class="anat bl"><b>Movimento e percentuale</b>Worker: <code>ctx.events.on("issue.updated")</code> → <code>ctx.streams.emit("org-flow", …)</code> → UI <code>usePluginStream</code>. La percentuale del singolo task Paperclip non ce l'ha: la fornisce l'agente con uno strumento del plugin (<code>agent.tools.register</code>, es. <code>report_progress</code>) salvato con <code>ctx.state</code>, oppure si contano le caselle spuntate del documento di piano.</div>
+        <div class="anat tl"><b>Org chart and characters</b>Structure from <code>GET /api/companies/:id/org</code>. The characters are Paperclip's own: <code>/api/agent-avatars/cap-v1/&lt;palette&gt;/&lt;pose&gt;.png</code> with the poses <code>idle · listening · thinking · working · success · confused · sleepy</code>. If the agent has an uploaded photo, that one is used.</div>
+        <div class="anat bl"><b>Movement and percentage</b>Worker: <code>ctx.events.on("issue.updated")</code> → <code>ctx.streams.emit("org-flow", …)</code> → UI <code>usePluginStream</code>. Paperclip has no percentage for a single task: the agent reports it through a plugin tool (<code>agent.tools.register</code>, e.g. <code>report_progress</code>) saved with <code>ctx.state</code>, or the ticked checkboxes of the plan document are counted.</div>
       </section>
 
-      <aside class="panel region" id="r-panel" aria-label="Dettaglio e attività">
+      <aside class="panel region" id="r-panel" aria-label="Detail and activity">
         <div id="sel"></div>
-        <header><h2>Attività in diretta</h2><span class="count" id="feed-count"></span></header>
+        <header><h2>Live activity</h2><span class="count" id="feed-count"></span></header>
         <ol id="feed"></ol>
-        <div class="anat tr"><b>Pannello</b>Dettaglio con <code>issues.read</code>. "Approva" chiama un'azione del worker (<code>ctx.actions.register("approve")</code> → <code>usePluginAction</code>) che aggiorna il task con <code>issues.update</code>.</div>
+        <div class="anat tr"><b>Panel</b>Detail via <code>issues.read</code>. "Approve" calls a worker action (<code>ctx.actions.register("approve")</code> → <code>usePluginAction</code>) that updates the task with <code>issues.update</code>.</div>
       </aside>
     </div>
 
     <section class="wp region" id="r-widget">
       <div class="wp-copy">
-        <h2>Lo stesso plugin nella dashboard</h2>
-        <p>Un plugin può aggiungere anche un riquadro alla dashboard principale di Paperclip. Versione compatta: avanzamento dei task padre, chi lavora, chi dorme e cosa aspetta te.</p>
+        <h2>The same plugin on the dashboard</h2>
+        <p>A plugin can also add a widget to Paperclip's main dashboard. Compact version: parent task progress, who is working, who is asleep and what is waiting on you.</p>
       </div>
-      <div class="widget" aria-label="Anteprima del riquadro per la dashboard">
+      <div class="widget" aria-label="Preview of the dashboard widget">
         <div class="wtop"><span>Org Flow</span><span class="live" id="w-live"><i></i>Live</span></div>
         <div id="w-rows" style="display:flex;flex-direction:column;gap:8px"></div>
         <div class="wfoot" id="w-foot"></div>
       </div>
-      <div class="anat tr"><b>Slot <code>dashboardWidget</code></b><code>ui.dashboardWidget.register</code>; legge lo stesso riepilogo del worker.</div>
+      <div class="anat tr"><b>Slot <code>dashboardWidget</code></b><code>ui.dashboardWidget.register</code>; reads the same summary from the worker.</div>
     </section>
 
-    <p class="foot">Prototipo statico. Persone, ruoli, catena di riporto e personaggi sono quelli dell'istanza al 18/11/2026; task, task padre, percentuali e passaggi sono inventati e generati dalla simulazione.</p>
+    <p class="foot">Static prototype. People, roles, reporting chain and characters are those of the instance as of 18 November 2026; tasks, parent tasks, percentages and handoffs are made up and generated by the simulation.</p>
   </main>
 </div>
 
@@ -400,7 +400,7 @@ const POSES = window.POSES || {};
 
 /* ---------- People: real org of the instance ---------- */
 const PEOPLE = [
-  { id:"board",   name:"Board", title:"Tu · operatore umano", parent:null, human:true },
+  { id:"board",   name:"Board", title:"You · human operator", parent:null, human:true },
   { id:"laura",   name:"Laura", title:"CEO", parent:"board", pal:"cherry-pop" },
   { id:"giulia",  name:"Giulia Bennett", title:"Graphic Team Lead", parent:"laura", pal:"golden-hour" },
   { id:"martina", name:"Martina Hayes", title:"Senior Designer", parent:"giulia", pal:"orchid-peach" },
@@ -441,32 +441,32 @@ const fmt = m => { const tot = ((BASE + Math.floor(m)) % 1440 + 1440) % 1440; re
 const dur = m => { m = Math.max(0, Math.round(m)); if (m < 60) return m + " min"; const h = Math.floor(m / 60), r = m % 60; return r ? `${h} h ${r} min` : `${h} h`; };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const first = id => byId[id].human ? "Board" : byId[id].name.split(" ")[0];
-const full = id => byId[id].human ? "Board (tu)" : byId[id].name;
+const full = id => byId[id].human ? "Board (you)" : byId[id].name;
 function el(tag, attrs = {}, parent){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
-const mav = (id, p = "idle") => byId[id].human ? `<span class="mav" title="Board">TU</span>` : `<img class="mav" src="${pose(id, p)}" alt="" title="${esc(byId[id].name)}">`;
+const mav = (id, p = "idle") => byId[id].human ? `<span class="mav" title="Board">YOU</span>` : `<img class="mav" src="${pose(id, p)}" alt="" title="${esc(byId[id].name)}">`;
 const tint = (c, pct) => `color-mix(in oklch, ${c} ${pct}%, var(--bg))`;
 
 /* ---------- Parent tasks and subtasks ---------- */
 const B = "board", L = "laura";
 const GROUP_DEFS = [
-  { title:"Nuova identità visiva degli agenti", color:"oklch(62% .19 300)", templates:[
-    ["Icone di stato per gli agenti",[B,L,"giulia","sofia"]], ["Avatar per il riquadro della dashboard",[B,L,"giulia","martina"]] ] },
-  { title:"Homelab più robusto", color:"oklch(63% .12 190)", templates:[
-    ["Inventario delle porte su home-pi",[B,L,"jamal","arold","luke"]], ["Allarme sulla temperatura di ai-pi",[B,L,"jamal","arold","daniel"]] ] },
-  { title:"Lancio del plugin Org Flow", color:"oklch(58% .19 255)", templates:[
-    ["Riquadro per la dashboard",[B,L,"jamal","daniel"]], ["Prova del plugin sull'istanza",[B,L,"jamal","arold","luke"]] ] },
-  { title:"Comunicazione di dicembre", color:"oklch(71% .15 62)", templates:[
-    ["Calendario editoriale di gennaio",[B,L,"iris"]], ["Copertina del report trimestrale",[B,L,"iris","giulia","martina"]] ] },
-  { title:"Knowledge base dell'infrastruttura", color:"oklch(63% .16 145)", templates:[
-    ["Schede per i report di Arold",[B,L,"joe"]], ["Glossario dei servizi di ai-pi",[B,L,"joe"]], ["Pagina sul plugin Org Flow",[B,L,"joe"]] ] },
+  { title:"New visual identity for the agents", color:"oklch(62% .19 300)", templates:[
+    ["Status icons for the agents",[B,L,"giulia","sofia"]], ["Avatars for the dashboard widget",[B,L,"giulia","martina"]] ] },
+  { title:"A sturdier infrastructure", color:"oklch(63% .12 190)", templates:[
+    ["Port inventory on the edge router",[B,L,"jamal","arold","luke"]], ["Temperature alert for the server room",[B,L,"jamal","arold","daniel"]] ] },
+  { title:"Org Flow plugin launch", color:"oklch(58% .19 255)", templates:[
+    ["Dashboard widget",[B,L,"jamal","daniel"]], ["Trying the plugin on the instance",[B,L,"jamal","arold","luke"]] ] },
+  { title:"December communications", color:"oklch(71% .15 62)", templates:[
+    ["January editorial calendar",[B,L,"iris"]], ["Quarterly report cover",[B,L,"iris","giulia","martina"]] ] },
+  { title:"Infrastructure knowledge base", color:"oklch(63% .16 145)", templates:[
+    ["Pages for Arold's reports",[B,L,"joe"]], ["Glossary of the server services",[B,L,"joe"]], ["Page about the Org Flow plugin",[B,L,"joe"]] ] },
 ];
 const GROUP_POOL = [
-  { title:"Sicurezza della rete di casa", color:"oklch(62% .2 18)", templates:[
-    ["Rete separata per i dispositivi IoT",[B,L,"jamal","arold","luke"]], ["Controllo delle password dei servizi",[B,L,"jamal","arold","daniel"]], ["Avviso in famiglia sul nuovo Wi-Fi",[B,L,"iris"]] ] },
-  { title:"Restyling del sito franciuto.com", color:"oklch(66% .13 215)", templates:[
-    ["Nuova home page",[B,L,"giulia","martina"]], ["Testi della pagina Chi sono",[B,L,"iris"]], ["Pubblicazione su home-pi",[B,L,"jamal","arold","luke"]] ] },
-  { title:"Archivio dei documenti di casa", color:"oklch(66% .15 110)", templates:[
-    ["Scansione delle bollette 2026",[B,L,"joe"]], ["Cartelle condivise su OneDrive",[B,L,"joe"]], ["Backup dell'archivio",[B,L,"jamal","arold","daniel"]] ] },
+  { title:"Home network security", color:"oklch(62% .2 18)", templates:[
+    ["Separate network for IoT devices",[B,L,"jamal","arold","luke"]], ["Service password check",[B,L,"jamal","arold","daniel"]], ["Family notice about the new Wi-Fi",[B,L,"iris"]] ] },
+  { title:"Website restyling", color:"oklch(66% .13 215)", templates:[
+    ["New home page",[B,L,"giulia","martina"]], ["Copy for the About me page",[B,L,"iris"]], ["Publishing on the edge router",[B,L,"jamal","arold","luke"]] ] },
+  { title:"Home document archive", color:"oklch(66% .15 110)", templates:[
+    ["Scanning the 2026 bills",[B,L,"joe"]], ["Shared folders on OneDrive",[B,L,"joe"]], ["Archive backup",[B,L,"jamal","arold","daniel"]] ] },
 ];
 let groupSeq = 50, taskSeq = 55, poolIdx = 0;
 const groups = [], tasks = new Map(), log = [];
@@ -474,11 +474,11 @@ let now = 0;
 const ps = Object.fromEntries(PEOPLE.map(p => [p.id, { emptySince:-30, flash:null, recv:0, sent:0 }]));
 
 function addGroup(def){
-  const g = { id:"FRA-" + (groupSeq++), title:def.title, color:def.color, templates:def.templates.map(t => [...t]), tasks:[], done:false, doneAt:0 };
+  const g = { id:"ACME-" + (groupSeq++), title:def.title, color:def.color, templates:def.templates.map(t => [...t]), tasks:[], done:false, doneAt:0 };
   groups.push(g); return g;
 }
 function newTask(g, title, route){
-  const t = { id:"FRA-" + (taskSeq++), title, group:g, route, idx:0, holder:"board", status:"todo", progress:0, nextAt:now + rand(1, 3), bounces:0, journey:[], events:[], blockedFrom:null, landAt:0, done:false, flying:false };
+  const t = { id:"ACME-" + (taskSeq++), title, group:g, route, idx:0, holder:"board", status:"todo", progress:0, nextAt:now + rand(1, 3), bounces:0, journey:[], events:[], blockedFrom:null, landAt:0, done:false, flying:false };
   g.tasks.push(t); tasks.set(t.id, t); return t;
 }
 const worker = t => t.route[t.route.length - 1];
@@ -519,17 +519,17 @@ function seed(g, title, route, stopIdx, status, progress, opt = {}){
   t.nextAt = rand(1, 4);
 }
 const [g0, g1, g2, g3, g4] = GROUP_DEFS.map(addGroup);
-seed(g0, "Pose degli avatar per i reparti", [B,L,"giulia","sofia"], 3, "in_progress", 45);
-seed(g0, "Palette uniforme per gli sfondi", [B,L,"giulia","martina"], 3, "in_progress", 72);
-seed(g0, "Guida all'uso degli avatar", [B,L,"giulia"], 2, "in_progress", 100, { review:true });
-seed(g1, "Backup di Postgres fuori dalla microSD", [B,L,"jamal","arold","daniel"], 4, "in_progress", 30);
-seed(g1, "Aggiornare Paperclip alla 2026.1106.0", [B,L,"jamal","arold","luke"], 4, "in_progress", 55, { blocked:true });
-seed(g1, "Rotazione del log service.out", [B,L,"jamal","arold","luke"], 3, "todo", 0);
-seed(g2, "Worker del plugin: eventi e stream", [B,L,"jamal","daniel"], 3, "in_progress", 18);
-seed(g2, "Pagina React dell'organigramma", [B,L,"jamal","giulia","martina"], 2, "todo", 0);
-seed(g3, "Newsletter di dicembre", [B,L,"iris"], 2, "in_progress", 60);
-seed(g3, "Post LinkedIn sul nuovo homelab", [B,L,"iris","giulia","sofia"], 3, "todo", 0);
-seed(g4, "Indice della knowledge base homelab", [B,L,"joe"], 2, "in_progress", 100, { done:true });
+seed(g0, "Avatar poses for the departments", [B,L,"giulia","sofia"], 3, "in_progress", 45);
+seed(g0, "Uniform palette for the backgrounds", [B,L,"giulia","martina"], 3, "in_progress", 72);
+seed(g0, "Avatar usage guide", [B,L,"giulia"], 2, "in_progress", 100, { review:true });
+seed(g1, "Postgres backup off the microSD", [B,L,"jamal","arold","daniel"], 4, "in_progress", 30);
+seed(g1, "Update Paperclip to 2026.1106.0", [B,L,"jamal","arold","luke"], 4, "in_progress", 55, { blocked:true });
+seed(g1, "service.out log rotation", [B,L,"jamal","arold","luke"], 3, "todo", 0);
+seed(g2, "Plugin worker: events and streams", [B,L,"jamal","daniel"], 3, "in_progress", 18);
+seed(g2, "React page for the org chart", [B,L,"jamal","giulia","martina"], 2, "todo", 0);
+seed(g3, "December newsletter", [B,L,"iris"], 2, "in_progress", 60);
+seed(g3, "LinkedIn post about the new data centre", [B,L,"iris","giulia","sofia"], 3, "todo", 0);
+seed(g4, "Homelab knowledge base index", [B,L,"joe"], 2, "in_progress", 100, { done:true });
 log.sort((a, b) => a.t - b.t);
 ps.joe.emptySince = -20; ps.luke.emptySince = -12;
 
@@ -607,20 +607,20 @@ function visual(p){
   const held = heldBy(p.id).filter(t => !t.flying);
   if (p.human) {
     const w = held.filter(t => t.status === "blocked");
-    return w.length ? { state:"waiting", label:`${w.length === 1 ? "1 decisione" : w.length + " decisioni"} per te` } : { state:"idle", label:"Nessuna richiesta" };
+    return w.length ? { state:"waiting", label:`${w.length === 1 ? "1 decision" : w.length + " decisions"} for you` } : { state:"idle", label:"No requests" };
   }
   const f = ps[p.id].flash;
   const a = activeTaskOf(p.id);
   if (f && f.until > performance.now()) {
-    const map = { listening:"Ha ricevuto un task", success:"Fatto!", confused:"Rimandato indietro" };
+    const map = { listening:"Received a task", success:"Done!", confused:"Sent back" };
     return { state:f.type, label:f.label || map[f.type], pose:f.type };
   }
-  if (a) return { state:"working", label:`Lavora su ${a.id} · ${a.progress}%`, pose:"working" };
+  if (a) return { state:"working", label:`Working on ${a.id} · ${a.progress}%`, pose:"working" };
   const rv = held.find(t => t.status === "in_review");
-  if (rv) return { state:"thinking", label:`Rivede ${rv.id}`, pose:"thinking" };
-  if (held.length) return { state:"idle", label: held.length === 1 ? `Smista ${held[0].id}` : `Smista ${held.length} task`, pose:"idle" };
-  if (now - ps[p.id].emptySince >= SLEEP_AFTER) return { state:"sleepy", label:`Dorme da ${dur(now - ps[p.id].emptySince)}`, pose:"sleepy" };
-  return { state:"idle", label:"Libero", pose:"idle" };
+  if (rv) return { state:"thinking", label:`Reviewing ${rv.id}`, pose:"thinking" };
+  if (held.length) return { state:"idle", label: held.length === 1 ? `Triaging ${held[0].id}` : `Triaging ${held.length} tasks`, pose:"idle" };
+  if (now - ps[p.id].emptySince >= SLEEP_AFTER) return { state:"sleepy", label:`Asleep for ${dur(now - ps[p.id].emptySince)}`, pose:"sleepy" };
+  return { state:"idle", label:"Idle", pose:"idle" };
 }
 
 /* ---------- SVG build ---------- */
@@ -663,7 +663,7 @@ for (const p of PEOPLE) {
   const badge = el("g", { class:"badge", transform:"translate(-26 -34)" }, g);
   el("circle", { r:8.5 }, badge);
   const bcount = el("text", { "text-anchor":"middle", "dominant-baseline":"central" }, badge);
-  const nm = el("text", { class:"nm", "text-anchor":"middle", y:34 }, g); nm.textContent = p.human ? "Board (tu)" : p.name;
+  const nm = el("text", { class:"nm", "text-anchor":"middle", y:34 }, g); nm.textContent = p.human ? "Board (you)" : p.name;
   const stl = el("text", { class:"stl", "text-anchor":"middle", y:48 }, g);
   const tip = el("title", {}, g); tip.textContent = `${p.name} · ${p.title}`;
   const chips = el("g", { transform:"translate(0 56)" }, outer);
@@ -777,7 +777,7 @@ function render(){
     if (held.length > 4) {
       if (!more) { more = el("text", { class:"more" }, n.chips); }
       more.setAttribute("x", 4); more.setAttribute("y", CHIP_H + 4 + 11.5);
-      more.textContent = `+${held.length - 3} altri`;
+      more.textContent = `+${held.length - 3} others`;
       n.chips.appendChild(more);
     } else if (more) more.remove();
   }
@@ -802,11 +802,11 @@ function renderParents(){
   const box = document.getElementById("parents");
   box.innerHTML = groups.map(g => {
     const s = groupStats(g);
-    const heads = s.holders.slice(0, 5).map(h => byId[h].human ? `<span class="mav" title="Board">TU</span>` : `<img src="${pose(h, "idle")}" alt="" title="${esc(byId[h].name)}">`).join("");
+    const heads = s.holders.slice(0, 5).map(h => byId[h].human ? `<span class="mav" title="Board">YOU</span>` : `<img src="${pose(h, "idle")}" alt="" title="${esc(byId[h].name)}">`).join("");
     return `<button type="button" class="pcard${g.done ? " done" : ""}${focus && focus !== g.id ? " dim" : ""}" data-group="${g.id}" aria-pressed="${focus === g.id}" style="--gc:${g.color}">
       <span class="ptop"><span class="sw"></span><span class="idm">${g.id}</span><span class="ptitle">${esc(g.title)}</span></span>
       <span class="pbar"><i style="width:${s.pct}%"></i></span>
-      <span class="pmeta"><span>${g.done ? "Completato" : `<b>${s.done}</b>/${s.n} chiusi · <b>${s.pct}%</b>`}</span><span class="heads">${heads}</span></span>
+      <span class="pmeta"><span>${g.done ? "Completed" : `<b>${s.done}</b>/${s.n} closed · <b>${s.pct}%</b>`}</span><span class="heads">${heads}</span></span>
     </button>`;
   }).join("");
 }
@@ -818,15 +818,15 @@ document.getElementById("parents").addEventListener("click", ev => {
 function eventLine(e){
   const P = e.progress !== undefined ? ` <em>${e.progress}%</em>` : "";
   switch (e.kind) {
-    case "created": return `<div class="fl1">${mav(B)}<span>Nuovo task dal board</span></div>`;
-    case "delegate": return `<div class="fl1">${mav(e.from)}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "listening")}<b>${esc(first(e.to))}</b><em>assegnato</em></div>`;
-    case "submit": return `<div class="fl1">${mav(e.from, "success")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "thinking")}<b>${esc(first(e.to))}</b><em>da rivedere</em></div>`;
-    case "approve": return `<div class="fl1">${mav(e.from, "success")}<b>${esc(first(e.from))}</b><em>ha approvato, fatto</em></div>`;
-    case "sentback": return `<div class="fl1">${mav(e.from, "thinking")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "confused")}<b>${esc(first(e.to))}</b><em>rimandato indietro</em>${P}</div>`;
-    case "blocked": return `<div class="fl1">${mav(e.from, "confused")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(B)}<b>Board</b><em>serve una tua decisione</em></div>`;
-    case "unblock": return `<div class="fl1">${mav(B)}<span>Board</span><span class="arrow">→</span>${mav(e.to, "listening")}<b>${esc(first(e.to))}</b><em>approvato da te</em></div>`;
-    case "changes": return `<div class="fl1">${mav(B)}<span>Board</span><span class="arrow">→</span>${mav(e.to, "confused")}<b>${esc(first(e.to))}</b><em>chiedi modifiche</em></div>`;
-    case "group_done": return `<div class="fl1">${mav(L, "success")}<b>Task padre completato</b></div>`;
+    case "created": return `<div class="fl1">${mav(B)}<span>New task from the board</span></div>`;
+    case "delegate": return `<div class="fl1">${mav(e.from)}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "listening")}<b>${esc(first(e.to))}</b><em>assigned</em></div>`;
+    case "submit": return `<div class="fl1">${mav(e.from, "success")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "thinking")}<b>${esc(first(e.to))}</b><em>to review</em></div>`;
+    case "approve": return `<div class="fl1">${mav(e.from, "success")}<b>${esc(first(e.from))}</b><em>approved, done</em></div>`;
+    case "sentback": return `<div class="fl1">${mav(e.from, "thinking")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(e.to, "confused")}<b>${esc(first(e.to))}</b><em>sent back</em>${P}</div>`;
+    case "blocked": return `<div class="fl1">${mav(e.from, "confused")}<span>${esc(first(e.from))}</span><span class="arrow">→</span>${mav(B)}<b>Board</b><em>needs your decision</em></div>`;
+    case "unblock": return `<div class="fl1">${mav(B)}<span>Board</span><span class="arrow">→</span>${mav(e.to, "listening")}<b>${esc(first(e.to))}</b><em>approved by you</em></div>`;
+    case "changes": return `<div class="fl1">${mav(B)}<span>Board</span><span class="arrow">→</span>${mav(e.to, "confused")}<b>${esc(first(e.to))}</b><em>you requested changes</em></div>`;
+    case "group_done": return `<div class="fl1">${mav(L, "success")}<b>Parent task completed</b></div>`;
   }
   return "";
 }
@@ -845,7 +845,7 @@ function renderFeed(){
   const evs = log.slice(-60).reverse();
   feed.innerHTML = evs.map((e, i) => `<li class="${sel?.type === "task" && e.task === sel.id ? "on" : ""}${i < fresh && lastLogLen ? " new" : ""}"><button type="button" ${e.task ? `data-task="${e.task}"` : `data-group="${e.group}"`}><span class="ft">${fmt(e.t)}</span><span>${eventLine(e)}${gref(e)}</span></button></li>`).join("");
   lastLogLen = log.length;
-  document.getElementById("feed-count").textContent = `${log.length} eventi`;
+  document.getElementById("feed-count").textContent = `${log.length} events`;
 }
 document.getElementById("feed").addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b) return;
@@ -859,7 +859,7 @@ function rawRow(t){
   const changes = {};
   if (e.from !== e.to) {
     changes.assigneeAgentId = { from:who(e.from), to:who(e.to) };
-    if (e.from === B || e.to === B) changes.assigneeUserId = { from: e.from === B ? "<utente board>" : null, to: e.to === B ? "<utente board>" : null };
+    if (e.from === B || e.to === B) changes.assigneeUserId = { from: e.from === B ? "<board user>" : null, to: e.to === B ? "<board user>" : null };
   }
   if (e.sFrom !== e.sTo) changes.status = { from:e.sFrom, to:e.sTo };
   return {
@@ -875,27 +875,27 @@ function renderSel(){
     const rows = t.journey.map((j, i) => {
       const next = t.journey[i + 1], cur = !next && !t.done;
       const end = next ? next.since : now;
-      return `<li class="${cur ? "cur" : ""}"><span class="n">${i + 1}</span>${mav(j.who)}<span>${esc(full(j.who))} <span class="idm">${fmt(j.since)}</span></span><span class="d">${cur ? "da " : ""}${dur(end - j.since)}</span></li>`;
+      return `<li class="${cur ? "cur" : ""}"><span class="n">${i + 1}</span>${mav(j.who)}<span>${esc(full(j.who))} <span class="idm">${fmt(j.since)}</span></span><span class="d">${cur ? "for " : ""}${dur(end - j.since)}</span></li>`;
     }).join("");
-    const ask = t.status === "blocked" ? `<div class="ask"><span><b>${esc(first(t.blockedFrom))}</b> chiede una tua decisione per andare avanti.</span><span class="acts"><button type="button" class="primary" data-act="approve" data-task="${t.id}">Approva</button><button type="button" class="ghost" data-act="changes" data-task="${t.id}">Chiedi modifiche</button></span></div>` : "";
+    const ask = t.status === "blocked" ? `<div class="ask"><span><b>${esc(first(t.blockedFrom))}</b> needs your decision to move on.</span><span class="acts"><button type="button" class="primary" data-act="approve" data-task="${t.id}">Approve</button><button type="button" class="ghost" data-act="changes" data-task="${t.id}">Request changes</button></span></div>` : "";
     box.innerHTML = `<div class="card">
-      <div class="card-top"><div class="pills"><span class="idm">${t.id}</span><span class="pill"><i style="background:${stColor(t.status)}"></i>${stLabel(t.status)}</span>${t.bounces ? `<span class="pill">Rimandato ${t.bounces}×</span>` : ""}</div><button class="x" type="button" data-close aria-label="Chiudi">×</button></div>
+      <div class="card-top"><div class="pills"><span class="idm">${t.id}</span><span class="pill"><i style="background:${stColor(t.status)}"></i>${stLabel(t.status)}</span>${t.bounces ? `<span class="pill">Sent back ${t.bounces}×</span>` : ""}</div><button class="x" type="button" data-close aria-label="Close">×</button></div>
       <h3>${esc(t.title)}</h3>
-      <div class="gline" style="--gc:${t.group.color}"><span class="sw"></span><span>Parte di <b>${t.group.id}</b> · ${esc(t.group.title)}</span></div>
+      <div class="gline" style="--gc:${t.group.color}"><span class="sw"></span><span>Part of <b>${t.group.id}</b> · ${esc(t.group.title)}</span></div>
       <div class="bigbar" style="--gc:${t.group.color}"><span class="pbar"><i style="width:${t.progress}%"></i></span><b>${t.progress}%</b></div>
       ${ask}
-      <div class="meta">${t.done ? "Chiuso" : "In mano a " + esc(full(t.holder))} · ${t.journey.length - 1} passaggi</div>
+      <div class="meta">${t.done ? "Closed" : "Held by " + esc(full(t.holder))} · ${t.journey.length - 1} handoffs</div>
       <ol class="path">${rows}</ol>
-      <details ${rawOpen ? "open" : ""} id="raw"><summary>Dati che il plugin leggerebbe</summary><pre>${esc(JSON.stringify(rawRow(t), null, 2))}</pre></details>
+      <details ${rawOpen ? "open" : ""} id="raw"><summary>Data the plugin would read</summary><pre>${esc(JSON.stringify(rawRow(t), null, 2))}</pre></details>
     </div>`;
   } else {
     const p = byId[sel.id], v = visual(p);
     const held = heldBy(p.id).sort((a, b) => groups.indexOf(a.group) - groups.indexOf(b.group));
-    const list = held.length ? `<div class="tasklist">${held.map(t => `<button type="button" class="trow" data-task="${t.id}" style="--gc:${t.group.color}"><span class="sw"></span><span class="t">${t.id} · ${esc(t.title)}</span><span class="p">${t.status === "blocked" ? "bloccato" : t.progress + "%"}</span></button>`).join("")}</div>` : `<div class="meta">Nessun task in mano.</div>`;
+    const list = held.length ? `<div class="tasklist">${held.map(t => `<button type="button" class="trow" data-task="${t.id}" style="--gc:${t.group.color}"><span class="sw"></span><span class="t">${t.id} · ${esc(t.title)}</span><span class="p">${t.status === "blocked" ? "blocked" : t.progress + "%"}</span></button>`).join("")}</div>` : `<div class="meta">No tasks held.</div>`;
     const big = p.human ? `<span class="mav" style="width:56px;height:56px;font-size:15px">TU</span>` : `<img src="${pose(p.id, v.pose || "idle")}" alt="">`;
     box.innerHTML = `<div class="card">
-      <div class="card-top"><div class="who">${big}<div><h3>${esc(full(p.id))}</h3><div class="meta">${esc(p.title)}</div><div class="meta"><b>${esc(v.label)}</b></div></div></div><button class="x" type="button" data-close aria-label="Chiudi">×</button></div>
-      <div class="stats"><div><b>${held.length}</b><span>in mano</span></div><div><b>${ps[p.id].recv}</b><span>ricevuti</span></div><div><b>${ps[p.id].sent}</b><span>passati</span></div></div>
+      <div class="card-top"><div class="who">${big}<div><h3>${esc(full(p.id))}</h3><div class="meta">${esc(p.title)}</div><div class="meta"><b>${esc(v.label)}</b></div></div></div><button class="x" type="button" data-close aria-label="Close">×</button></div>
+      <div class="stats"><div><b>${held.length}</b><span>held</span></div><div><b>${ps[p.id].recv}</b><span>received</span></div><div><b>${ps[p.id].sent}</b><span>passed on</span></div></div>
       ${list}
     </div>`;
   }
@@ -926,8 +926,8 @@ function renderWidget(){
   const wait = heldBy(B).filter(t => t.status === "blocked").length;
   const st = PEOPLE.filter(p => !p.human).map(visual);
   document.getElementById("w-foot").innerHTML =
-    `<span><b>${st.filter(v => v.state === "working").length}</b> al lavoro</span><span><b>${st.filter(v => v.state === "sleepy").length}</b> dormono</span>` +
-    (wait ? `<span class="w">${wait === 1 ? "1 task aspetta" : wait + " task aspettano"} te</span>` : `<span>Niente da approvare</span>`);
+    `<span><b>${st.filter(v => v.state === "working").length}</b> working</span><span><b>${st.filter(v => v.state === "sleepy").length}</b> asleep</span>` +
+    (wait ? `<span class="w">${wait === 1 ? "1 task is waiting" : wait + " tasks are waiting"} on you</span>` : `<span>Nothing to approve</span>`);
 }
 
 /* ---------- KPI icons (real poses) ---------- */
@@ -943,9 +943,9 @@ function schedule(){ clearInterval(timer); if (!paused) timer = setInterval(tick
 document.getElementById("pace").addEventListener("change", schedule);
 document.getElementById("pause").addEventListener("click", ev => {
   paused = !paused; ev.currentTarget.setAttribute("aria-pressed", paused);
-  document.getElementById("pause-l").textContent = paused ? "Riprendi" : "Pausa";
+  document.getElementById("pause-l").textContent = paused ? "Resume" : "Pause";
   document.getElementById("pause-ic").innerHTML = paused ? '<path d="M2 1l9 5-9 5z"/>' : '<path d="M2 1h3v10H2zM7 1h3v10H7z"/>';
-  for (const id of ["live","w-live"]) { const l = document.getElementById(id); l.classList.toggle("off", paused); l.lastChild.textContent = paused ? "In pausa" : "Live"; }
+  for (const id of ["live","w-live"]) { const l = document.getElementById(id); l.classList.toggle("off", paused); l.lastChild.textContent = paused ? "Paused" : "Live"; }
   schedule();
 });
 document.getElementById("t-anat").addEventListener("click", ev => { const on = !document.body.classList.contains("anat-on"); document.body.classList.toggle("anat-on", on); ev.currentTarget.setAttribute("aria-pressed", on); });

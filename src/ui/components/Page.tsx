@@ -68,16 +68,16 @@ function PingButton({ companyId }: { companyId: string }) {
     setState({ busy: true, msg: null, ok: true });
     try {
       await ping({ companyId });
-      show(true, "Connessione verificata", "Il worker ha risposto: l'evento di prova compare tra le attività.");
+      show(true, "Connection verified", "The worker replied: the test event appears in the activity feed.");
     } catch (err) {
       const e = err as { message?: string };
-      show(false, `Verifica non riuscita: ${e?.message ?? "errore sconosciuto"}`);
+      show(false, `Check failed: ${e?.message ?? "unknown error"}`);
     }
   };
   return (
     <>
-      <button type="button" className="of-mini" onClick={run} disabled={state.busy} title="Chiede al worker un evento di prova">
-        {state.busy ? "Verifico…" : "Verifica connessione"}
+      <button type="button" className="of-mini" onClick={run} disabled={state.busy} title="Asks the worker for a test event">
+        {state.busy ? "Checking…" : "Check connection"}
       </button>
       {state.msg && <span className={`of-mini-msg${state.ok ? "" : " of-bad"}`} role="status">{state.msg}</span>}
     </>
@@ -164,9 +164,9 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
     const nameOf = (party: Party | undefined) => {
       const id = resolveParty(party, view.people);
       const p = id ? view.people.find((x) => x.id === id) : undefined;
-      return p?.name ?? party?.name ?? (party?.kind === "user" ? "Board" : "qualcuno");
+      return p?.name ?? party?.name ?? (party?.kind === "user" ? "Board" : "someone");
     };
-    say(`${describeRecord(last, nameOf)}${last.identifier ? `: ${last.identifier}` : ""}${records.length > 1 ? ` (e altri ${records.length - 1} eventi)` : ""}`);
+    say(`${describeRecord(last, nameOf)}${last.identifier ? `: ${last.identifier}` : ""}${records.length > 1 ? ` (and ${records.length - 1} more ${records.length === 2 ? "event" : "events"})` : ""}`);
     setFresh((prev) => new Set([...prev, ...records.map((r) => r.id)]));
     if (freshTimer.current) clearTimeout(freshTimer.current);
     freshTimer.current = setTimeout(() => setFresh(new Set()), FRESH_MS);
@@ -215,7 +215,7 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
   const colorOf = useCallback((id: string) => groupById.get(id)?.color ?? STANDALONE_COLOR, [groupById]);
   const titleOf = useCallback((id: string) => groupById.get(id)?.title ?? "", [groupById]);
 
-  // Overrides on top of the snapshot; tasks held by people not on the chart go to "Altri".
+  // Overrides on top of the snapshot; tasks held by people not on the chart go to "Others".
   const bucket = useMemo(
     () => bucketUnknownHolders(applyOverrides(base?.tasks ?? [], pruneOverrides(overrides, base?.generatedAt ?? null, nowMs)), base?.people ?? []),
     [base?.tasks, base?.people, base?.generatedAt, overrides, nowMs],
@@ -279,7 +279,7 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
   const onFlightDone = useCallback((key: string) => setFlights((prev) => prev.filter((f) => f.key !== key)), []);
   const select = useCallback((s: Selection | null) => setSel((cur) => (s && cur && cur.type === s.type && cur.id === s.id ? null : s)), []);
 
-  const conn = simOn ? { cls: "of-sim", text: "Simulazione" } : { cls: live.connection === "live" ? "" : live.connection === "connecting" ? "of-connecting" : "of-offline", text: CONNECTION_LABEL[live.connection] };
+  const conn = simOn ? { cls: "of-sim", text: "Simulation" } : { cls: live.connection === "live" ? "" : live.connection === "connecting" ? "of-connecting" : "of-offline", text: CONNECTION_LABEL[live.connection] };
 
   const stageRef = useRef<HTMLElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -290,7 +290,7 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
   /* ---------- states without data ---------- */
   if (!companyId) {
     return (
-      <div className="of-root"><div className="of-page"><h1 className="of-h1">Org Flow</h1><p className="of-sub">Apri Org Flow dall'interno di una company per vedere il suo organigramma in diretta.</p></div></div>
+      <div className="of-root"><div className="of-page"><h1 className="of-h1">Org Flow</h1><p className="of-sub">Open Org Flow from within a company to see its org chart live.</p></div></div>
     );
   }
   if (!base) {
@@ -300,9 +300,9 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
         <div className="of-page">
           <div className="of-titlerow"><h1 className="of-h1">Org Flow</h1></div>
           {live.error ? (
-            <div className="of-error" role="alert">Non riesco a leggere i dati del plugin: {live.error}. Riprovo da solo tra poco.</div>
+            <div className="of-error" role="alert">Can't read the plugin data: {live.error}. Retrying shortly.</div>
           ) : (
-            <p className="of-sub" aria-busy="true">Carico l'organigramma…</p>
+            <p className="of-sub" aria-busy="true">Loading the org chart…</p>
           )}
         </div>
       </div>
@@ -322,24 +322,24 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
       <div className="of-sr" role="status" aria-live="polite" aria-atomic="true">{announcement}</div>
       <div className="of-page of-full">
         <header className="of-head">
-          <h1 className="of-h1" title="Chi sta facendo cosa in questo momento, a che punto è ogni task e come passa da una persona all'altra. I colori sono i task padre.">Org Flow</h1>
-          <span className={`of-conn ${conn.cls}`} title={live.lastOkAt && !simOn ? `Ultimo aggiornamento ${relativeTime(new Date(live.lastOkAt).toISOString(), nowMs)}` : undefined}>
+          <h1 className="of-h1" title="Who is doing what right now, how far along each task is, and how it moves from one person to another. The colours are the parent tasks.">Org Flow</h1>
+          <span className={`of-conn ${conn.cls}`} title={live.lastOkAt && !simOn ? `Last updated ${relativeTime(new Date(live.lastOkAt).toISOString(), nowMs)}` : undefined}>
             <i aria-hidden="true" />{conn.text}
           </span>
-          <span className="of-clock" aria-label={`Ora ${clockTime(displayNow)}`}>{clockTime(displayNow)}</span>
+          <span className="of-clock" aria-label={`Time ${clockTime(displayNow)}`}>{clockTime(displayNow)}</span>
           {!simOn && <PingButton companyId={companyId} />}
           <div className="of-controls">
-            <button type="button" className="of-btn" aria-pressed={!!fullscreen.mode} onClick={fullscreen.toggle} title={fullscreen.mode ? "Esci dallo schermo intero (Esc)" : "Mostra Org Flow a schermo intero"}>
+            <button type="button" className="of-btn" aria-pressed={!!fullscreen.mode} onClick={fullscreen.toggle} title={fullscreen.mode ? "Exit full screen (Esc)" : "Show Org Flow full screen"}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 {fullscreen.mode
                   ? <path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6" />
                   : <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" />}
               </svg>
-              {fullscreen.mode ? "Esci dallo schermo intero" : "Schermo intero"}
+              {fullscreen.mode ? "Exit full screen" : "Full screen"}
             </button>
             {showSim && (
               <button type="button" className="of-btn" aria-pressed={simOn} onClick={() => setSimOn((v) => !v)}>
-                <span className="of-switch" aria-hidden="true" />Simulazione
+                <span className="of-switch" aria-hidden="true" />Simulation
               </button>
             )}
           </div>
@@ -348,13 +348,13 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
         {simOn && (
           <div className="of-banner" role="note">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3" /><path d="M7 15h10" /></svg>
-            <div>Simulazione — dati finti, niente viene scritto su Paperclip. <span>Persone e personaggi sono quelli veri; task, percentuali e passaggi sono inventati.</span></div>
+            <div>Simulation — fake data, nothing is written to Paperclip. <span>People and characters are the real ones; tasks, percentages and handoffs are made up.</span></div>
           </div>
         )}
 
         <section
           className="of-stage"
-          aria-label="Organigramma con i task"
+          aria-label="Org chart with tasks"
           ref={stageRef}
           style={stageHeight ? { height: stageHeight } : undefined}
           onKeyDown={(ev) => { if (ev.key === "Escape" && sel) { ev.preventDefault(); closeDetail(); } }}
@@ -374,22 +374,22 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
               flights={flights}
               onFlightDone={onFlightDone}
               onSelect={select}
-              ariaLabel="Organigramma della company con i task in mano a ciascuno"
+              ariaLabel="Company org chart with the tasks each person holds"
             />
           ) : (
-            <p className="of-feed-empty" style={{ padding: 20 }}>Nessun agente in questa company.</p>
+            <p className="of-feed-empty" style={{ padding: 20 }}>No agents in this company.</p>
           )}
           <div className="of-legend">
             {(["todo", "in_progress", "in_review", "blocked"] as const).map((s) => (
               <span key={s}>
                 <svg viewBox="-6 -6 12 12" aria-hidden="true"><StatusGlyph status={s} /></svg>
-                {({ todo: "Da fare", in_progress: "In corso", in_review: "In revisione", blocked: "Bloccato" } as const)[s]}
+                {({ todo: "To do", in_progress: "In progress", in_review: "In review", blocked: "Blocked" } as const)[s]}
               </span>
             ))}
-            <span>Il riempimento è la percentuale di completamento</span>
-            <span className="of-hint">Clicca una persona o un task per i dettagli</span>
+            <span>The fill is the completion percentage</span>
+            <span className="of-hint">Click a person or a task for details</span>
           </div>
-          <Drawer open={!!(selTask || selPerson)} label={selTask ? `Dettaglio del task ${taskCode(selTask)}` : `Dettaglio di ${selPerson?.name ?? ""}`} onClose={closeDetail}>
+          <Drawer open={!!(selTask || selPerson)} label={selTask ? `Task ${taskCode(selTask)} details` : `${selPerson?.name ?? ""} details`} onClose={closeDetail}>
             {selTask && (
               <TaskCard
                 task={selTask}
@@ -420,22 +420,22 @@ function OrgFlowPageInner({ context }: PluginPageProps) {
         <div className="of-sections">
           <div className="of-sec-tools">
             <button type="button" className="of-mini" onClick={() => sections.setAll(sectionIds, !allOpen)}>
-              {allOpen ? "Comprimi tutto" : "Espandi tutto"}
+              {allOpen ? "Collapse all" : "Expand all"}
             </button>
           </div>
           {strip.length ? (
-            <Section id="parents" title="Task padre" meta={strip.length} open={sections.isOpen("parents")} onToggle={() => sections.toggle("parents")}>
+            <Section id="parents" title="Parent tasks" meta={strip.length} open={sections.isOpen("parents")} onToggle={() => sections.toggle("parents")}>
               <ParentStrip groups={strip} people={personById} focusGroup={focusGroup} openByGroup={openByGroup} onFocus={setFocusGroup} />
             </Section>
           ) : (
-            <Section id="parents" title="Chiusi di recente" open={sections.isOpen("parents")} onToggle={() => sections.toggle("parents")}>
+            <Section id="parents" title="Recently closed" open={sections.isOpen("parents")} onToggle={() => sections.toggle("parents")}>
               <QuietStrip people={people} closed={recentlyClosed(tasks)} groupColor={colorOf} nowMs={displayNow} onSelect={select} />
             </Section>
           )}
-          <Section id="kpi" title="Adesso" open={sections.isOpen("kpi")} onToggle={() => sections.toggle("kpi")}>
+          <Section id="kpi" title="Now" open={sections.isOpen("kpi")} onToggle={() => sections.toggle("kpi")}>
             <KpiStrip people={people} counts={counts} onWaiting={users.length ? () => setSel({ type: "person", id: users[0]!.id }) : undefined} />
           </Section>
-          <Section id="feed" title="Attività in diretta" meta={feed.length === 1 ? "1 evento" : `${feed.length} eventi`} open={sections.isOpen("feed")} onToggle={() => sections.toggle("feed")}>
+          <Section id="feed" title="Live activity" meta={feed.length === 1 ? "1 event" : `${feed.length} events`} open={sections.isOpen("feed")} onToggle={() => sections.toggle("feed")}>
             <div className="of-feedbox">
               <ActivityFeed records={feed} ctx={feedCtx} freshIds={fresh} selectedTaskId={selTask?.id ?? null} nowMs={displayNow} taskIdOf={taskIdOf} onSelect={select} />
             </div>

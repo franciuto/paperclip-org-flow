@@ -104,7 +104,7 @@ describe("personSignals", () => {
     expect(s.get("D")!.bounced?.issueId).toBe("t3");
     // handoff + done: the previous holder closed it
     expect(s.get("E")!.closed?.issueId).toBe("t4");
-    // the one getting the done task back ("un suo task è stato approvato") also celebrates
+    // the one getting the done task back ("one of their tasks was approved") also celebrates
     expect(s.get("F")!.closed?.issueId).toBe("t4");
     expect(s.get("F")!.stats.closed24h).toBe(0);
     expect(s.get("A")!.lastActivityAt).toBe(ago(30));
@@ -123,7 +123,7 @@ describe("bouncesByIssue / backwards work", () => {
   const chain: Record<string, string | null> = { luke: "arold", martina: "giulia", sofia: "giulia" };
   const managerOf = (id: string) => chain[id] ?? null;
 
-  it("delegate down and return up is normal flow (FRA-20 / FRA-35)", () => {
+  it("delegate down and return up is normal flow (ACME-20 / ACME-35)", () => {
     const entries = [
       h({ at: ago(500), issueId: "f35", kind: "created", toId: "arold" }),
       h({ at: ago(400), issueId: "f35", fromId: "arold", toId: "luke", statusFrom: "in_progress", statusTo: "todo" }),
@@ -133,7 +133,7 @@ describe("bouncesByIssue / backwards work", () => {
     expect(personSignals(entries, NOW, managerOf).get("arold")!.bounced).toBeUndefined();
   });
 
-  it("A→B→C→A back up the chain is not a bounce (FRA-32)", () => {
+  it("A→B→C→A back up the chain is not a bounce (ACME-32)", () => {
     const entries = [
       h({ at: ago(500), issueId: "f32", kind: "created", toId: "giulia" }),
       h({ at: ago(400), issueId: "f32", fromId: "giulia", toId: "martina" }),
@@ -144,7 +144,7 @@ describe("bouncesByIssue / backwards work", () => {
     expect(personSignals(entries, NOW, managerOf).get("giulia")!.bounced).toBeUndefined();
   });
 
-  it("escalating up and getting it back down (real FRA-35: Luke → Arold → Luke, blocked → todo) is normal", () => {
+  it("escalating up and getting it back down (real ACME-35: Luke → Arold → Luke, blocked → todo) is normal", () => {
     const entries = [
       h({ at: ago(500), issueId: "e", kind: "created", toId: "luke" }),
       h({ at: ago(400), issueId: "e", fromId: "luke", toId: "arold", statusFrom: "in_progress", statusTo: "todo" }),
@@ -155,7 +155,7 @@ describe("bouncesByIssue / backwards work", () => {
     expect(personSignals(entries, NOW, managerOf).get("luke")!.bounced).toBeUndefined();
   });
 
-  it("parking moves are not rework (in_review → blocked/backlog, real FRA-23 / FRA-6)", () => {
+  it("parking moves are not rework (in_review → blocked/backlog, real ACME-23 / ACME-6)", () => {
     expect(isStatusRegression("in_review", "blocked")).toBe(false);
     expect(isStatusRegression("in_review", "backlog")).toBe(false);
     expect(isStatusRegression("done", "in_review")).toBe(true);

@@ -12,7 +12,7 @@ const contexts = await Promise.all([
 
 if (watch) {
   await Promise.all(contexts.map((ctx) => ctx.watch()));
-  console.log("esbuild: watch attivo per worker, manifest e ui");
+  console.log("esbuild: watch active for worker, manifest and ui");
 } else {
   await Promise.all(contexts.map((ctx) => ctx.rebuild()));
   await Promise.all(contexts.map((ctx) => ctx.dispose()));

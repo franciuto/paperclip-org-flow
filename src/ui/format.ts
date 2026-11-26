@@ -1,17 +1,17 @@
 /**
  * Formatting helpers for the Org Flow UI. Pure functions, no React, no DOM.
- * Every user-facing string is Italian.
+ * Every user-facing string is English.
  */
 import type { Pose, ProgressSource } from "../shared/types.js";
 
 export const STATUS_LABEL: Record<string, string> = {
   backlog: "Backlog",
-  todo: "Da fare",
-  in_progress: "In corso",
-  in_review: "In revisione",
-  blocked: "Bloccato",
-  done: "Fatto",
-  cancelled: "Annullato",
+  todo: "To do",
+  in_progress: "In progress",
+  in_review: "In review",
+  blocked: "Blocked",
+  done: "Done",
+  cancelled: "Cancelled",
 };
 
 export function statusLabel(status: string | null | undefined): string {
@@ -24,7 +24,7 @@ export function isClosedStatus(status: string | null | undefined): boolean {
 }
 
 /**
- * Same rule as the worker's isStatusRegression (src/worker/history.ts), so "Rimandato" means the
+ * Same rule as the worker's isStatusRegression (src/worker/history.ts), so "Sent back" means the
  * same thing everywhere: review → rework (todo/in_progress) or a closed task reopened
  * (done → todo/in_progress/in_review). Parking moves (backlog, blocked) and cancellations are not.
  * (The worker also counts a task in review handed back DOWN the chain to a previous holder; that
@@ -57,10 +57,10 @@ export function statusColorVar(status: string | null | undefined): string {
 }
 
 export const SOURCE_LABEL: Record<ProgressSource, string> = {
-  reported: "riportata dall'agente",
-  checklist: "dalla checklist del piano",
-  children: "dai sotto-task chiusi",
-  status: "stimata dallo stato",
+  reported: "reported by the agent",
+  checklist: "from the plan checklist",
+  children: "from closed child tasks",
+  status: "estimated from status",
 };
 
 export function plural(n: number, one: string, many: string): string {
@@ -71,9 +71,9 @@ const MIN = 60_000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
-/** Compact duration: "meno di 1 min", "7 min", "2 h 5 min", "3 g 4 h". */
+/** Compact duration: "less than 1 min", "7 min", "2 h 5 min", "3 d 4 h". */
 export function formatDuration(ms: number): string {
-  if (!Number.isFinite(ms) || ms < MIN) return "meno di 1 min";
+  if (!Number.isFinite(ms) || ms < MIN) return "less than 1 min";
   if (ms < HOUR) return `${Math.floor(ms / MIN)} min`;
   if (ms < DAY) {
     const h = Math.floor(ms / HOUR);
@@ -82,20 +82,20 @@ export function formatDuration(ms: number): string {
   }
   const d = Math.floor(ms / DAY);
   const h = Math.floor((ms % DAY) / HOUR);
-  return h ? `${d} g ${h} h` : `${d} g`;
+  return h ? `${d} d ${h} h` : `${d} d`;
 }
 
-/** Relative time in the past: "adesso", "3 min fa", "2 h fa", "ieri", "4 g fa". */
+/** Relative time in the past: "now", "3 min ago", "2 h ago", "yesterday", "4 d ago". */
 export function relativeTime(iso: string | null | undefined, nowMs: number): string {
   if (!iso) return "—";
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "—";
   const diff = nowMs - t;
-  if (diff < 45_000) return "adesso";
-  if (diff < HOUR) return `${Math.max(1, Math.round(diff / MIN))} min fa`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)} h fa`;
-  if (diff < 2 * DAY) return "ieri";
-  return `${Math.floor(diff / DAY)} g fa`;
+  if (diff < 45_000) return "now";
+  if (diff < HOUR) return `${Math.max(1, Math.round(diff / MIN))} min ago`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)} h ago`;
+  if (diff < 2 * DAY) return "yesterday";
+  return `${Math.floor(diff / DAY)} d ago`;
 }
 
 /** "14:05" in local time. */
@@ -111,7 +111,7 @@ export function fullDateTime(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString("it-IT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}, ${clockTime(d.getTime())}`;
 }
 
 export function firstName(name: string): string {
@@ -180,9 +180,9 @@ export function taskCode(task: { identifier: string | null; title: string; id: s
   return t ? (t.length > 7 ? t.slice(0, 6) + "…" : t) : task.id.slice(0, 6);
 }
 
-/** Natural compare for identifiers like FRA-9 < FRA-62. */
+/** Natural compare for identifiers like ACME-9 < ACME-62. */
 export function naturalCompare(a: string, b: string): number {
-  return a.localeCompare(b, "it", { numeric: true, sensitivity: "base" });
+  return a.localeCompare(b, "en", { numeric: true, sensitivity: "base" });
 }
 
 export function clampPercent(n: number | null | undefined): number {

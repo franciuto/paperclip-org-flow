@@ -15,31 +15,31 @@ export interface DepartmentAgent {
 
 export interface DepartmentNameOverride { lead: string; name: string }
 
-/** Title keywords → Italian department name, checked in this order. */
+/** Title keywords → department name, checked in this order. */
 const TITLE_RULES: Array<[RegExp, string]> = [
-  [/grafic|graphic|design/, "Grafica"],
-  [/communicat|comunicazion|marketing|social/, "Comunicazione"],
-  [/\b(cio|cto|it)\b|system|sistem|infrastruct|infrastrutt|network|\breti?\b|devops|sysadmin/, "IT e infrastruttura"],
-  [/librar|bibliotec|knowledge|archiv|documentation|documentazion/, "Libreria"],
-  [/financ|finanz|accounting|contabil|\badmin/, "Amministrazione"],
-  [/sales|vendit/, "Vendite"],
-  [/engineer|developer|software|svilupp/, "Sviluppo"],
-  [/legal/, "Legale"],
-  [/\bhr\b|people|human resources|risorse umane/, "Persone"],
+  [/grafic|graphic|design/, "Graphics"],
+  [/communicat|comunicazion|marketing|social/, "Communications"],
+  [/\b(cio|cto|it)\b|system|sistem|infrastruct|infrastrutt|network|\breti?\b|devops|sysadmin/, "IT and infrastructure"],
+  [/librar|bibliotec|knowledge|archiv|documentation|documentazion/, "Library"],
+  [/financ|finanz|accounting|contabil|\badmin/, "Administration"],
+  [/sales|vendit/, "Sales"],
+  [/engineer|developer|software|svilupp/, "Development"],
+  [/legal/, "Legal"],
+  [/\bhr\b|people|human resources|risorse umane/, "People"],
 ];
 
 const ROLE_NAMES: Record<string, string> = {
-  designer: "Grafica",
-  cmo: "Comunicazione",
-  cto: "IT e infrastruttura",
-  devops: "IT e infrastruttura",
-  engineer: "Sviluppo",
-  researcher: "Ricerca",
+  designer: "Graphics",
+  cmo: "Communications",
+  cto: "IT and infrastructure",
+  devops: "IT and infrastructure",
+  engineer: "Development",
+  researcher: "Research",
 };
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
 
-/** Name for a department led by `lead`: override, then title keywords, then role, then "Team di <nome>". */
+/** Name for a department led by `lead`: override, then title keywords, then role, then "<Name>'s team". */
 export function departmentName(lead: DepartmentAgent, overrides: DepartmentNameOverride[] = []): string {
   const leadName = lead.name.trim().toLowerCase();
   const hit = overrides.find((o) => {
@@ -51,7 +51,7 @@ export function departmentName(lead: DepartmentAgent, overrides: DepartmentNameO
   if (title) for (const [re, name] of TITLE_RULES) if (re.test(title)) return name;
   const byRole = lead.role ? ROLE_NAMES[lead.role.toLowerCase()] : undefined;
   if (byRole) return byRole;
-  return `Team di ${firstName(lead.name)}`;
+  return `${firstName(lead.name)}'s team`;
 }
 
 /**
@@ -117,7 +117,7 @@ export function computeDepartments(agents: DepartmentAgent[], overrides: Departm
     }
   }
 
-  // Same name twice → "Grafica · Giulia", "Grafica · Marco".
+  // Same name twice → "Graphics · Giulia", "Graphics · Marco".
   const counts = new Map<string, number>();
   for (const d of departments) counts.set(d.name, (counts.get(d.name) ?? 0) + 1);
   const leadName = new Map(agents.map((a) => [a.id, a.name]));

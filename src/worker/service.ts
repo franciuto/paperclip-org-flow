@@ -192,7 +192,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
         const read = async (key: string) => {
           try { return await ctx.state.get(companyKey(c.id, key)); } catch (err) {
             failed = true;
-            warn("org-flow: lettura dello stato non riuscita, riprovo più tardi", { companyId: c.id, key, error: errMsg(err) });
+            warn("org-flow: failed to read state, will retry later", { companyId: c.id, key, error: errMsg(err) });
             return null;
           }
         };
@@ -228,7 +228,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
   async function persist(c: CompanyRuntime, key: string, value: unknown) {
     if (!c.loaded) return;
     try { await ctx.state.set(companyKey(c.id, key), value); } catch (err) {
-      warn("org-flow: salvataggio dello stato non riuscito", { companyId: c.id, key, error: errMsg(err) });
+      warn("org-flow: failed to save state", { companyId: c.id, key, error: errMsg(err) });
     }
   }
 
@@ -240,7 +240,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       const raw = await ctx.config.get(c.id);
       c.settings = { at: now(), value: resolveSettings(raw) };
     } catch (err) {
-      warn("org-flow: lettura delle impostazioni non riuscita, uso i valori predefiniti", { companyId: c.id, error: errMsg(err) });
+      warn("org-flow: failed to read settings, using defaults", { companyId: c.id, error: errMsg(err) });
       c.settings = { at: now(), value: c.settings?.value ?? resolveSettings({}) };
     }
     return c.settings.value;
@@ -253,7 +253,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       const list = rows.map(toAgentLite).filter((a): a is AgentLite => !!a);
       c.agents = { at: now(), list };
     } catch (err) {
-      warn("org-flow: elenco agenti non disponibile", { companyId: c.id, error: errMsg(err) });
+      warn("org-flow: agent list unavailable", { companyId: c.id, error: errMsg(err) });
       if (!c.agents) return [];
       c.agents.at = now() - AGENTS_TTL_MS / 2; // retry soon, keep the old list meanwhile
     }
@@ -293,7 +293,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     } catch (err) {
       // Deleted or unreadable parent: the children become standalone.
       if (cached) { cached.at = now(); return cached; }
-      ctx.logger.debug("org-flow: task padre non leggibile", { companyId: c.id, parentId, error: errMsg(err) });
+      ctx.logger.debug("org-flow: parent task not readable", { companyId: c.id, parentId, error: errMsg(err) });
       entry = { at: now() - PARENT_TTL_MS + PARENT_RETRY_MS, parent: null, children: { done: 0, total: 0 }, childStatuses: {} };
     }
     c.parents.set(parentId, entry);
@@ -309,7 +309,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       value = parseChecklist(doc?.body ?? null);
     } catch (err) {
       if (cached) { cached.at = now(); return cached.value; }
-      ctx.logger.debug("org-flow: documento plan non leggibile", { companyId: c.id, issueId, error: errMsg(err) });
+      ctx.logger.debug("org-flow: plan document not readable", { companyId: c.id, issueId, error: errMsg(err) });
     }
     c.checklists.set(issueId, { at: now(), value });
     return value;
@@ -399,7 +399,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     } catch (err) {
       c.baseDirty = true;
       lastBuildError = { at: now(), message: errMsg(err) };
-      warn("org-flow: costruzione dello snapshot non riuscita, uso i dati precedenti", { companyId: c.id, error: errMsg(err) });
+      warn("org-flow: snapshot build failed, using previous data", { companyId: c.id, error: errMsg(err) });
       if (!c.base) {
         const agents = c.agents?.list ?? [];
         c.base = { agents, issues: [...c.patched.values()], parents: {}, children: {}, checklists: {}, builtAt: new Date(now()).toISOString() };
@@ -485,7 +485,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       }
       ctx.streams.emit(STREAM_CHANNEL, msg);
     } catch (err) {
-      warn("org-flow: invio sullo stream non riuscito", { companyId, error: errMsg(err) });
+      warn("org-flow: failed to send on the stream", { companyId, error: errMsg(err) });
     }
   }
 
@@ -501,7 +501,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     if (c.timer) clearTimeout(c.timer);
     c.timer = setTimeout(() => {
       c.timer = null;
-      emitSnapshotNow(c, c.baseDirty).catch((err) => warn("org-flow: snapshot ritardato non riuscito", { companyId: c.id, error: errMsg(err) }));
+      emitSnapshotNow(c, c.baseDirty).catch((err) => warn("org-flow: delayed snapshot failed", { companyId: c.id, error: errMsg(err) }));
     }, debounceMs);
   }
 
@@ -528,7 +528,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     try {
       return toIssueLite(await ctx.issues.get(issueId, c.id));
     } catch (err) {
-      warn("org-flow: lettura del task non riuscita", { companyId: c.id, issueId, error: errMsg(err) });
+      warn("org-flow: failed to read task", { companyId: c.id, issueId, error: errMsg(err) });
       return null;
     }
   }
@@ -598,7 +598,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
         rec.to = await withName(c, rec.to ?? undefined);
         rec.actor = await withName(c, rec.actor ?? undefined);
       } catch (err) {
-        warn("org-flow: arricchimento dell'evento non riuscito", { eventId: ev.eventId, error: errMsg(err) });
+        warn("org-flow: event enrichment failed", { eventId: ev.eventId, error: errMsg(err) });
       }
       await publish(c, rec, holder);
     }
@@ -626,7 +626,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     await persist(c, STATE_REPORTED, c.reported);
     if (c.loaded) {
       try { await ctx.state.delete({ scopeKind: "issue", scopeId: issueId, stateKey: STATE_PROGRESS }); } catch (err) {
-        warn("org-flow: azzeramento dell'avanzamento non riuscito", { issueId, error: errMsg(err) });
+        warn("org-flow: progress reset failed", { issueId, error: errMsg(err) });
       }
     }
   }
@@ -668,7 +668,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
           if (info) { rec.identifier = info.identifier; rec.title = info.title; rec.parentId = info.parentId; }
         }
       } catch (err) {
-        warn("org-flow: arricchimento dell'evento non riuscito", { eventId: ev.eventId, error: errMsg(err) });
+        warn("org-flow: event enrichment failed", { eventId: ev.eventId, error: errMsg(err) });
       }
       await publish(c, rec, null);
     }
@@ -716,7 +716,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
           break;
       }
     } catch (err) {
-      warn("org-flow: gestione dell'evento non riuscita", { eventType: ev.eventType, eventId: ev.eventId, error: errMsg(err) });
+      warn("org-flow: event handling failed", { eventType: ev.eventType, eventId: ev.eventId, error: errMsg(err) });
     }
   }
 
@@ -736,7 +736,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     await ensureLoaded(c);
     const rec: FeedRecord = { id: randomUUID(), at: new Date(now()).toISOString(), kind: "ping" };
     await publish(c, rec, null);
-    try { await emitSnapshotNow(c, false); } catch (err) { warn("org-flow: snapshot dopo il ping non riuscito", { error: errMsg(err) }); }
+    try { await emitSnapshotNow(c, false); } catch (err) { warn("org-flow: snapshot after ping failed", { error: errMsg(err) }); }
     return { ok: true };
   }
 
@@ -776,23 +776,23 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     const { issue: ref, percent, note } = parsed.value;
     const companyId = str(run?.companyId);
     const agentId = str(run?.agentId);
-    if (!companyId || !agentId) return { error: "Contesto del run incompleto: impossibile identificare agente e company." };
+    if (!companyId || !agentId) return { error: "Incomplete run context: cannot identify agent and company." };
     const c = rt(companyId);
     await ensureLoaded(c);
 
     const issue = await resolveIssueRef(c, ref);
-    if (!issue) return { error: `Task "${ref}" non trovato in questa company. Usa l'identificatore (es. FRA-62) o l'id del task.` };
+    if (!issue) return { error: `Task "${ref}" not found in this company. Use the identifier (e.g. ACME-62) or the task id.` };
     const label = issue.identifier ?? issue.title;
     if (isClosedStatus(issue.status)) {
-      return { error: `Il task ${label} è già chiuso (${issue.status}): non serve riportare l'avanzamento.` };
+      return { error: `Task ${label} is already closed (${issue.status}): no need to report progress.` };
     }
     const agents = await getAgents(c);
     const reportsTo = new Map(agents.map((a) => [a.id, a.reportsTo]));
     if (!isSelfOrSubordinate(agentId, issue.assigneeAgentId, reportsTo)) {
       const holder = issue.assigneeAgentId
-        ? (agents.find((a) => a.id === issue.assigneeAgentId)?.name ?? "un altro agente")
-        : issue.assigneeUserId ? "il board" : "nessuno";
-      return { error: `Puoi riportare l'avanzamento solo sui task assegnati a te o ai tuoi sottoposti: ${label} è assegnato a ${holder}.` };
+        ? (agents.find((a) => a.id === issue.assigneeAgentId)?.name ?? "another agent")
+        : issue.assigneeUserId ? "the board" : "nobody";
+      return { error: `You can only report progress on tasks assigned to you or to your subordinates: ${label} is assigned to ${holder}.` };
     }
 
     const at = new Date(now()).toISOString();
@@ -804,7 +804,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     await Promise.all([
       (async () => {
         try { await ctx.state.set({ scopeKind: "issue", scopeId: issue.id, stateKey: STATE_PROGRESS }, value); } catch (err) {
-          warn("org-flow: salvataggio dell'avanzamento non riuscito", { issueId: issue.id, error: errMsg(err) });
+          warn("org-flow: failed to save progress", { issueId: issue.id, error: errMsg(err) });
         }
       })(),
       persist(c, STATE_REPORTED, c.reported),
@@ -817,11 +817,11 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
       parentId: issue.parentId, actor: { kind: "agent", id: agentId, ...(name ? { name } : {}) }, percent, note,
     };
     await publish(c, rec, holderOf(issue));
-    try { await emitSnapshotNow(c, false); } catch (err) { warn("org-flow: snapshot dopo report_progress non riuscito", { error: errMsg(err) }); }
+    try { await emitSnapshotNow(c, false); } catch (err) { warn("org-flow: snapshot after report_progress failed", { error: errMsg(err) }); }
 
-    const noteText = note ? ` Nota: "${note}".` : "";
+    const noteText = note ? ` Note: "${note}".` : "";
     return {
-      content: `Avanzamento registrato: ${label} al ${percent}%.${noteText} Il board lo vede ora in Org Flow.`,
+      content: `Progress recorded: ${label} at ${percent}%.${noteText} The board now sees it in Org Flow.`,
       data: { issueId: issue.id, identifier: issue.identifier, percent, note, reportedAt: at },
     };
   }
@@ -843,7 +843,7 @@ export function createOrgFlowService(ctx: PluginContext, opts: { debounceMs?: nu
     const degraded = !!lastBuildError && now() - lastBuildError.at < 5 * 60_000;
     return {
       status: degraded ? ("degraded" as const) : ("ok" as const),
-      message: degraded ? `Org Flow attivo, ultimo aggiornamento non riuscito: ${lastBuildError!.message}` : "Org Flow attivo",
+      message: degraded ? `Org Flow running, last update failed: ${lastBuildError!.message}` : "Org Flow running",
       details: { companies: companies.size, lastEventAt, warnings },
     };
   }

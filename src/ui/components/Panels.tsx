@@ -49,7 +49,7 @@ export function ParentStrip(props: {
 }) {
   const { groups, people, focusGroup, onFocus } = props;
   return (
-    <section className="of-parents" aria-label="Task padre">
+    <section className="of-parents" aria-label="Parent tasks">
       {groups.map((g) => {
         const done = isGroupDone(g);
         const pct = clampPercent(g.progress);
@@ -61,7 +61,7 @@ export function ParentStrip(props: {
             className={`of-pcard${focusGroup && focusGroup !== g.id ? " of-dim" : ""}`}
             style={gc(g.color)}
             aria-pressed={focusGroup === g.id}
-            aria-label={`${g.identifier ?? ""} ${g.title}: ${done ? "completato" : `${g.childrenDone} su ${g.childrenTotal} chiusi, ${pct}%`}. ${focusGroup === g.id ? "Mostra tutti" : "Evidenzia nell'organigramma"}`}
+            aria-label={`${g.identifier ?? ""} ${g.title}: ${done ? "completed" : `${g.childrenDone} of ${g.childrenTotal} closed, ${pct}%`}. ${focusGroup === g.id ? "Show all" : "Highlight in the org chart"}`}
             onClick={() => onFocus(focusGroup === g.id ? null : g.id)}
           >
             <span className="of-ptop">
@@ -72,13 +72,13 @@ export function ParentStrip(props: {
             {g.id !== STANDALONE_GROUP_ID && <span className="of-bar"><i style={{ width: `${done ? 100 : pct}%` }} /></span>}
             <span className="of-pmeta">
               {g.id === STANDALONE_GROUP_ID ? (
-                <span>{plural(props.openByGroup.get(g.id) ?? 0, "task aperto", "task aperti")}</span>
+                <span>{plural(props.openByGroup.get(g.id) ?? 0, "open task", "open tasks")}</span>
               ) : done ? (
-                <span className="of-done-tag">Completato</span>
+                <span className="of-done-tag">Completed</span>
               ) : g.childrenTotal ? (
-                <span><b>{g.childrenDone}</b>/{g.childrenTotal} chiusi · <b>{pct}%</b></span>
+                <span><b>{g.childrenDone}</b>/{g.childrenTotal} closed · <b>{pct}%</b></span>
               ) : (
-                <span>Nessun sotto-task</span>
+                <span>No child tasks</span>
               )}
               <span className="of-heads">
                 {heads.map((h) => {
@@ -107,7 +107,7 @@ export function QuietStrip(props: {
   const sleeping = props.people.filter((p) => p.kind === "agent" && p.state === "sleepy").length;
   const agents = props.people.filter((p) => p.kind === "agent").length;
   return (
-    <section className="of-quiet" aria-label="Situazione tranquilla">
+    <section className="of-quiet" aria-label="Quiet state">
       <div className="of-calm">
         <span className="of-calm-faces" aria-hidden="true">
           {sleepers.map((p) => (
@@ -115,11 +115,11 @@ export function QuietStrip(props: {
           ))}
         </span>
         <span>
-          <b>Tutto tranquillo: nessun task aperto</b>
+          <b>All quiet: no open tasks</b>
           <p>
             {sleeping === agents && agents > 0
-              ? "Gli agenti si riposano. Appena arriva un task li vedi svegliarsi e passarselo qui sotto."
-              : `${plural(sleeping, "agente dorme", "agenti dormono")}. Appena arriva un task lo vedi passare di mano qui sotto.`}
+              ? "The agents are resting. As soon as a task arrives you will see them wake up and hand it off below."
+              : `${plural(sleeping, "agent is asleep", "agents are asleep")}. As soon as a task arrives you will see it handed off below.`}
           </p>
         </span>
       </div>
@@ -138,7 +138,7 @@ export function QuietStrip(props: {
             ))}
           </ul>
         ) : (
-          <p className="of-empty">Nessun task chiuso nelle ultime ore.</p>
+          <p className="of-empty">No tasks closed in the last few hours.</p>
         )}
       </div>
     </section>
@@ -158,12 +158,12 @@ function kpiFace(people: PersonView[], state: PersonView["state"], slot: number)
 export function KpiStrip(props: { people: PersonView[]; counts: LiveCounts; onWaiting?: () => void }) {
   const { people, counts } = props;
   const items: Array<{ key: string; v: number; l: string; pose: Pose; state: PersonView["state"]; slot: number }> = [
-    { key: "working", v: counts.working, l: "Al lavoro", pose: "working", state: "working", slot: 0 },
-    { key: "thinking", v: counts.thinking, l: "Rivedono", pose: "thinking", state: "thinking", slot: 1 },
-    { key: "sleepy", v: counts.sleepy, l: "Dormono", pose: "sleepy", state: "sleepy", slot: 2 },
+    { key: "working", v: counts.working, l: "Working", pose: "working", state: "working", slot: 0 },
+    { key: "thinking", v: counts.thinking, l: "Reviewing", pose: "thinking", state: "thinking", slot: 1 },
+    { key: "sleepy", v: counts.sleepy, l: "Asleep", pose: "sleepy", state: "sleepy", slot: 2 },
   ];
   return (
-    <section className="of-kpis" aria-label="Adesso">
+    <section className="of-kpis" aria-label="Now">
       {items.map((k) => (
         <div className="of-kpi" key={k.key}>
           <Avatar person={kpiFace(people, k.state, k.slot)} pose={k.pose} size={34} />
@@ -174,7 +174,7 @@ export function KpiStrip(props: { people: PersonView[]; counts: LiveCounts; onWa
         </div>
       ))}
       {props.onWaiting ? (
-        <button type="button" className={`of-kpi of-click${counts.tasksWaitingForUsers ? " of-warn" : ""}`} onClick={props.onWaiting} aria-label={`Aspettano te: ${counts.tasksWaitingForUsers}. Mostra i dettagli`}>
+        <button type="button" className={`of-kpi of-click${counts.tasksWaitingForUsers ? " of-warn" : ""}`} onClick={props.onWaiting} aria-label={`Waiting for you: ${counts.tasksWaitingForUsers}. Show details`}>
           <Avatar person={kpiFace(people, "confused", 3)} pose={counts.tasksWaitingForUsers ? "confused" : "idle"} size={34} />
           <div>
             <div className="of-v">{counts.tasksWaitingForUsers}</div>
@@ -223,38 +223,38 @@ export function TaskCard(props: {
         <div className="of-pills">
           <a className="of-idm" {...nav.linkProps(issuePath(t))}>{taskCode(t)}</a>
           <span className="of-pill"><i style={{ background: statusColorVar(t.status) }} />{statusLabel(t.status)}</span>
-          {t.bounces > 0 && <span className="of-pill">Rimandato {t.bounces}×</span>}
-          {t.priority && t.priority !== "medium" && <span className="of-pill">Priorità {priorityLabel(t.priority)}</span>}
+          {t.bounces > 0 && <span className="of-pill">Sent back {t.bounces}×</span>}
+          {t.priority && t.priority !== "medium" && <span className="of-pill">Priority {t.priority}</span>}
         </div>
-        <button className="of-x" type="button" onClick={props.onClose} aria-label="Chiudi il dettaglio (Esc)" data-autofocus>×</button>
+        <button className="of-x" type="button" onClick={props.onClose} aria-label="Close the detail panel (Esc)" data-autofocus>×</button>
       </div>
       <h3><a {...nav.linkProps(issuePath(t))}>{t.title}</a></h3>
       {group && group.id !== "standalone" ? (
         <div className="of-gline" style={gc(props.groupColor)}>
           <span className="of-sw" />
-          <span>Parte di <b>{group.identifier ?? ""}</b> · {group.title}</span>
+          <span>Part of <b>{group.identifier ?? ""}</b> · {group.title}</span>
         </div>
       ) : (
-        <div className="of-gline" style={gc(props.groupColor)}><span className="of-sw" /><span>Task senza padre</span></div>
+        <div className="of-gline" style={gc(props.groupColor)}><span className="of-sw" /><span>Task without a parent</span></div>
       )}
       <div className="of-bigbar" style={gc(props.groupColor)}>
-        <span className="of-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Completamento"><i style={{ width: `${pct}%` }} /></span>
+        <span className="of-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Completion"><i style={{ width: `${pct}%` }} /></span>
         <b>{pct}%</b>
       </div>
-      <div className="of-src">Percentuale {SOURCE_LABEL[t.progressSource] ?? ""}{t.progressNote ? ` · “${t.progressNote}”` : ""}</div>
+      <div className="of-src">Percentage {SOURCE_LABEL[t.progressSource] ?? ""}{t.progressNote ? ` · “${t.progressNote}”` : ""}</div>
       <div className="of-meta">
         {closed ? (
-          <>Chiuso {relativeTime(t.closedAt ?? t.updatedAt, nowMs)}</>
+          <>Closed {relativeTime(t.closedAt ?? t.updatedAt, nowMs)}</>
         ) : holder ? (
-          <>In mano a <b>{holder.name}</b></>
+          <>Held by <b>{holder.name}</b></>
         ) : (
-          <>Senza assegnatario</>
+          <>Unassigned</>
         )}
         {" · "}
-        {plural(Math.max(0, journey.length - 1), "passaggio", "passaggi")}
+        {plural(Math.max(0, journey.length - 1), "handoff", "handoffs")}
       </div>
       {journey.length > 0 && (
-        <ol className="of-path" aria-label="Percorso del task">
+        <ol className="of-path" aria-label="Task path">
           {journey.map((j, i) => {
             const p = people.get(j.personId);
             const cur = i === journey.length - 1 && !closed;
@@ -268,26 +268,22 @@ export function TaskCard(props: {
                       {p.name}
                     </button>
                   ) : (
-                    "Persona non più presente"
+                    "Person no longer present"
                   )}{" "}
                   <span className="of-idm" title={fullDateTime(j.since)}>{clockTime(j.since)}</span>
                 </span>
-                <span className="of-d">{cur ? "da " : ""}{formatDuration(endOf(i) - Date.parse(j.since))}</span>
+                <span className="of-d">{cur ? "for " : ""}{formatDuration(endOf(i) - Date.parse(j.since))}</span>
               </li>
             );
           })}
         </ol>
       )}
       <a className="of-link" {...nav.linkProps(issuePath(t))}>
-        Apri il task in Paperclip
+        Open the task in Paperclip
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M6 3h7v7M13 3 4 12" /></svg>
       </a>
     </div>
   );
-}
-
-function priorityLabel(p: string): string {
-  return ({ critical: "critica", high: "alta", low: "bassa", urgent: "urgente" } as Record<string, string>)[p] ?? p;
 }
 
 export function PersonCard(props: {
@@ -307,23 +303,23 @@ export function PersonCard(props: {
   const order = [...byGroup.keys()].sort((a, b) => indexOr(props.groupOrder, a) - indexOr(props.groupOrder, b));
   const link = agentPath(p);
   return (
-    <div className="of-card" aria-label={`Persona ${p.name}`}>
+    <div className="of-card" aria-label={`Person ${p.name}`}>
       <div className="of-card-top">
         <div className="of-who">
           <Avatar person={p} pose={pose} size={72} />
           <div style={{ minWidth: 0 }}>
             <h3>{link ? <a {...nav.linkProps(link)}>{p.name}</a> : p.name}</h3>
-            <div className="of-meta">{p.title ?? (p.kind === "user" ? "Operatore umano" : p.role ?? "")}</div>
+            <div className="of-meta">{p.title ?? (p.kind === "user" ? "Human operator" : p.role ?? "")}</div>
             <div className="of-meta"><b>{p.stateLabel}</b></div>
           </div>
         </div>
-        <button className="of-x" type="button" onClick={props.onClose} aria-label="Chiudi il dettaglio (Esc)" data-autofocus>×</button>
+        <button className="of-x" type="button" onClick={props.onClose} aria-label="Close the detail panel (Esc)" data-autofocus>×</button>
       </div>
       <div className="of-stats">
-        <div><b>{held.length}</b><span>in mano</span></div>
-        <div><b>{p.stats.received24h}</b><span>ricevuti 24h</span></div>
-        <div><b>{p.stats.passed24h}</b><span>passati 24h</span></div>
-        <div><b>{p.stats.closed24h}</b><span>chiusi 24h</span></div>
+        <div><b>{held.length}</b><span>held</span></div>
+        <div><b>{p.stats.received24h}</b><span>received 24h</span></div>
+        <div><b>{p.stats.passed24h}</b><span>handed off 24h</span></div>
+        <div><b>{p.stats.closed24h}</b><span>closed 24h</span></div>
       </div>
       {held.length ? (
         order.map((gid) => {
@@ -332,24 +328,24 @@ export function PersonCard(props: {
             <div className="of-tgroup" key={gid}>
               <div className="of-tgroup-h" style={gc(props.groupColor(gid))}>
                 <span className="of-sw" />
-                <span>{g && gid !== "standalone" ? `${g.identifier ? g.identifier + " · " : ""}${g.title}` : "Senza padre"}</span>
+                <span>{g && gid !== "standalone" ? `${g.identifier ? g.identifier + " · " : ""}${g.title}` : "No parent"}</span>
               </div>
               {byGroup.get(gid)!.map((t) => (
                 <button key={t.id} type="button" className="of-trow" style={gc(props.groupColor(gid))} onClick={() => props.onSelect({ type: "task", id: t.id })}>
                   <span className="of-sw" />
                   <span className="of-t">{taskCode(t)} · {t.title}</span>
-                  <span className="of-p">{t.status === "blocked" ? "bloccato" : t.status === "in_review" ? "in revisione" : `${clampPercent(t.progress)}%`}</span>
+                  <span className="of-p">{t.status === "blocked" ? "blocked" : t.status === "in_review" ? "in review" : `${clampPercent(t.progress)}%`}</span>
                 </button>
               ))}
             </div>
           );
         })
       ) : (
-        <div className="of-meta">Nessun task in mano.</div>
+        <div className="of-meta">No tasks held.</div>
       )}
       {link && (
         <a className="of-link" {...nav.linkProps(link)}>
-          Apri la scheda dell'agente
+          Open the agent page
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M6 3h7v7M13 3 4 12" /></svg>
         </a>
       )}
@@ -375,7 +371,7 @@ function who(ctx: FeedContext, party: Party | undefined): { person: PersonView |
   const person = id ? ctx.personById.get(id) : undefined;
   if (person) return { person, name: person.kind === "user" ? person.name : firstName(person.name) };
   if (party?.name) return { person: undefined, name: party.kind === "user" ? party.name : firstName(party.name) };
-  return { person: undefined, name: party?.kind === "user" ? "Board" : "qualcuno" };
+  return { person: undefined, name: party?.kind === "user" ? "Board" : "someone" };
 }
 
 const SEND_BACK = (r: FeedRecord) => statusRegression(r.statusFrom, r.statusTo) !== null;
@@ -394,24 +390,24 @@ function FeedLine({ r, ctx }: { r: FeedRecord; ctx: FeedContext }): ReactNode {
   switch (r.kind) {
     case "handoff": {
       const toUser = r.to?.kind === "user";
-      const em = REOPEN(r) ? "riaperto" : SEND_BACK(r) ? "rimandato indietro" : r.statusTo === "in_review" ? "da rivedere" : r.statusTo === "blocked" ? "serve una tua decisione" : toUser ? "per te" : "assegnato";
+      const em = REOPEN(r) ? "reopened" : SEND_BACK(r) ? "sent back" : r.statusTo === "in_review" ? "to review" : r.statusTo === "blocked" ? "needs your decision" : toUser ? "for you" : "assigned";
       const pose: Pose = SEND_BACK(r) ? "confused" : r.statusTo === "in_review" ? "thinking" : "listening";
       return (
         <div className="of-fl1">
-          {r.from ? A(r.from) : <span>Nessuno</span>}
+          {r.from ? A(r.from) : <span>Nobody</span>}
           <span className="of-arrow" aria-hidden="true">→</span>
-          {r.to ? A(r.to, pose, true) : <b>nessuno</b>}
+          {r.to ? A(r.to, pose, true) : <b>nobody</b>}
           <em>{em}</em>
         </div>
       );
     }
     case "status":
       if (r.statusTo === "done")
-        return <div className="of-fl1">{A(r.actor, "success", true)}<span className="of-ok">ha chiuso il task</span></div>;
+        return <div className="of-fl1">{A(r.actor, "success", true)}<span className="of-ok">closed the task</span></div>;
       if (REOPEN(r))
-        return <div className="of-fl1">{A(r.actor, "confused", true)}<em>ha riaperto il task</em></div>;
+        return <div className="of-fl1">{A(r.actor, "confused", true)}<em>reopened the task</em></div>;
       if (SEND_BACK(r))
-        return <div className="of-fl1">{A(r.actor, "thinking", true)}<em>ha rimandato indietro</em></div>;
+        return <div className="of-fl1">{A(r.actor, "thinking", true)}<em>sent the task back</em></div>;
       return (
         <div className="of-fl1">
           {r.actor ? A(r.actor, "idle", true) : null}
@@ -421,24 +417,24 @@ function FeedLine({ r, ctx }: { r: FeedRecord; ctx: FeedContext }): ReactNode {
         </div>
       );
     case "created":
-      return <div className="of-fl1"><span>Nuovo task</span>{r.to ? <><em>per</em>{A(r.to, "listening", true)}</> : null}</div>;
+      return <div className="of-fl1"><span>New task</span>{r.to ? <><em>for</em>{A(r.to, "listening", true)}</> : null}</div>;
     case "run_started":
-      return <div className="of-fl1">{A(r.actor, "working", true)}<em>inizia a lavorare</em></div>;
+      return <div className="of-fl1">{A(r.actor, "working", true)}<em>started working</em></div>;
     case "run_finished":
-      return <div className="of-fl1">{A(r.actor, "idle", true)}<em>ha finito il run</em></div>;
+      return <div className="of-fl1">{A(r.actor, "idle", true)}<em>finished the run</em></div>;
     case "run_failed":
-      return <div className="of-fl1">{A(r.actor, "confused", true)}<span className="of-bad">run fallito</span></div>;
+      return <div className="of-fl1">{A(r.actor, "confused", true)}<span className="of-bad">run failed</span></div>;
     case "progress":
       return (
         <div className="of-fl1">
-          {A(r.actor, "working", true)}<em>è al</em><b>{clampPercent(r.percent)}%</b>
+          {A(r.actor, "working", true)}<em>is at</em><b>{clampPercent(r.percent)}%</b>
           {r.note ? <em title={r.note}>· {r.note.length > 60 ? r.note.slice(0, 59) + "…" : r.note}</em> : null}
         </div>
       );
     case "ping":
-      return <div className="of-fl1"><em>Evento di prova: worker e pagina sono collegati</em></div>;
+      return <div className="of-fl1"><em>Test event: worker and page are connected</em></div>;
     default:
-      return <div className="of-fl1"><em>Evento</em></div>;
+      return <div className="of-fl1"><em>Event</em></div>;
   }
 }
 
@@ -453,10 +449,10 @@ export function ActivityFeed(props: {
 }) {
   const { records, ctx } = props;
   if (!records.length) {
-    return <p className="of-feed-empty">Ancora nessuna attività registrata. Appena un task cambia mano o stato, o un agente parte, compare qui.</p>;
+    return <p className="of-feed-empty">No activity recorded yet. As soon as a task changes hands or status, or an agent starts, it shows up here.</p>;
   }
   return (
-    <ol className="of-feed" aria-label="Eventi recenti, dal più nuovo">
+    <ol className="of-feed" aria-label="Recent events, newest first">
       {records.map((r) => {
         const tid = props.taskIdOf(r);
         const on = !!tid && tid === props.selectedTaskId;

@@ -269,7 +269,7 @@ export function OrgChart(props: OrgChartProps) {
   return (
     <>
     <div className="of-scroll" ref={scrollRef}>
-      <svg ref={svgRef} className="of-org" width={W} height={H} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label={`${props.ariaLabel}. Usa le frecce per spostarti tra persone e task, Invio per i dettagli.`} onKeyDown={onChartKey}>
+      <svg ref={svgRef} className="of-org" width={W} height={H} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label={`${props.ariaLabel}. Use the arrow keys to move between people and tasks, Enter for details.`} onKeyDown={onChartKey}>
         <g aria-hidden="true">
           {layout.boxes.map((b) => (
             <g key={b.id} className="of-dept">
@@ -297,7 +297,7 @@ export function OrgChart(props: OrgChartProps) {
             const dimmed = !!focusGroup && !tasks.some((t) => t.groupId === focusGroup) && !isTouched;
             const pose = POSE_FOR_STATE[p.state] ?? "idle";
             const label = truncateToWidth(p.stateLabel, n.width - 6, LABEL_FONT);
-            const nodeLabel = `${p.name}${p.title ? `, ${p.title}` : ""}: ${p.stateLabel}. ${tasks.length === 1 ? "1 task in mano" : `${tasks.length} task in mano`}`;
+            const nodeLabel = `${p.name}${p.title ? `, ${p.title}` : ""}: ${p.stateLabel}. ${tasks.length === 1 ? "1 task held" : `${tasks.length} tasks held`}`;
             const pick = () => onSelect({ type: "person", id });
             const half = n.width / 2;
             const clipId = `of-clip-${uid}-${layout.ids.indexOf(id)}`;
@@ -379,7 +379,7 @@ export function OrgChart(props: OrgChartProps) {
                     })}
                     {n.chips.more && (
                       <text className="of-more" x={n.chips.more.x + 4} y={n.chips.more.y + 12.5}>
-                        {`+${n.chips.more.count} altri`}
+                        {`+${n.chips.more.count} others`}
                       </text>
                     )}
                   </g>
@@ -398,7 +398,7 @@ export function OrgChart(props: OrgChartProps) {
         </g>
       </svg>
     </div>
-    {avail > 0 && layout.width * scale > avail + 4 && <p className="of-scrollhint">Scorri di lato per vedere tutto l'organigramma</p>}
+    {avail > 0 && layout.width * scale > avail + 4 && <p className="of-scrollhint">Scroll sideways to see the whole org chart</p>}
     </>
   );
 }

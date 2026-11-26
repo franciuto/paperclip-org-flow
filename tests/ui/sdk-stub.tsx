@@ -37,44 +37,44 @@ function patchTask(s: Snapshot, identifier: string, p: Partial<TaskView>, newHol
     return next;
   });
 }
-const base = (n: number, title: string, group: number | null) => ({ issueId: `iss-${n}`, identifier: `FRA-${n}`, title, parentId: group === null ? null : `grp-${group}` });
+const base = (n: number, title: string, group: number | null) => ({ issueId: `iss-${n}`, identifier: `ACME-${n}`, title, parentId: group === null ? null : `grp-${group}` });
 
 interface Step { at: number; rec: Omit<FeedRecord, "id" | "at">; apply?: (s: Snapshot) => void }
 
 const BUSY_SCRIPT: Step[] = [
   {
     at: 1200,
-    rec: { kind: "handoff", ...base(62, "Pagina React dell'organigramma", 2), from: agent("jamal"), to: agent("giulia"), actor: agent("jamal"), statusFrom: "todo", statusTo: "todo" },
+    rec: { kind: "handoff", ...base(62, "React page for the org chart", 2), from: agent("jamal"), to: agent("giulia"), actor: agent("jamal"), statusFrom: "todo", statusTo: "todo" },
     apply: (s) => {
-      patchTask(s, "FRA-62", { holderId: IDS.giulia }, IDS.giulia);
-      patchPerson(s, IDS.jamal, { state: "idle", stateLabel: "Libero" });
-      patchPerson(s, IDS.giulia, { state: "listening", stateLabel: "Ha ricevuto FRA-62" });
+      patchTask(s, "ACME-62", { holderId: IDS.giulia }, IDS.giulia);
+      patchPerson(s, IDS.jamal, { state: "idle", stateLabel: "Idle" });
+      patchPerson(s, IDS.giulia, { state: "listening", stateLabel: "Received ACME-62" });
     },
   },
   {
     at: 2600,
-    rec: { kind: "status", ...base(57, "Guida all'uso degli avatar", 0), actor: agent("laura"), statusFrom: "in_review", statusTo: "done" },
+    rec: { kind: "status", ...base(57, "Avatar usage guide", 0), actor: agent("laura"), statusFrom: "in_review", statusTo: "done" },
     apply: (s) => {
-      patchTask(s, "FRA-57", { status: "done", progress: 100, closedAt: iso() });
-      patchPerson(s, IDS.laura, { state: "success", stateLabel: "Ha chiuso FRA-57" });
+      patchTask(s, "ACME-57", { status: "done", progress: 100, closedAt: iso() });
+      patchPerson(s, IDS.laura, { state: "success", stateLabel: "Closed ACME-57" });
       s.groups = s.groups.map((g) => (g.id === "grp-0" ? { ...g, childrenDone: g.childrenDone + 1, progress: Math.round(((g.childrenDone + 1) / g.childrenTotal) * 100) } : g));
     },
   },
   {
     at: 3800,
-    rec: { kind: "handoff", ...base(56, "Palette uniforme per gli sfondi", 0), from: agent("martina"), to: agent("giulia"), actor: agent("martina"), statusFrom: "in_progress", statusTo: "in_review" },
+    rec: { kind: "handoff", ...base(56, "Uniform palette for backgrounds", 0), from: agent("martina"), to: agent("giulia"), actor: agent("martina"), statusFrom: "in_progress", statusTo: "in_review" },
     apply: (s) => {
-      patchTask(s, "FRA-56", { holderId: IDS.giulia, status: "in_review", progress: 100 }, IDS.giulia);
-      patchPerson(s, IDS.martina, { state: "idle", stateLabel: "Libero" });
-      patchPerson(s, IDS.giulia, { state: "thinking", stateLabel: "Revisiona FRA-56" });
+      patchTask(s, "ACME-56", { holderId: IDS.giulia, status: "in_review", progress: 100 }, IDS.giulia);
+      patchPerson(s, IDS.martina, { state: "idle", stateLabel: "Idle" });
+      patchPerson(s, IDS.giulia, { state: "thinking", stateLabel: "Reviewing ACME-56" });
     },
   },
   {
     at: 5000,
-    rec: { kind: "progress", ...base(55, "Pose degli avatar per i reparti", 0), actor: agent("sofia"), percent: 58, note: "Fatte 7 pose su 12" },
+    rec: { kind: "progress", ...base(55, "Avatar poses for the departments", 0), actor: agent("sofia"), percent: 58, note: "7 of 12 poses done" },
     apply: (s) => {
-      patchTask(s, "FRA-55", { progress: 58, progressNote: "Fatte 7 pose su 12" });
-      patchPerson(s, IDS.sofia, { stateLabel: "Lavora su FRA-55 · 58%" });
+      patchTask(s, "ACME-55", { progress: 58, progressNote: "7 of 12 poses done" });
+      patchPerson(s, IDS.sofia, { stateLabel: "Working on ACME-55 · 58%" });
     },
   },
   {
@@ -83,11 +83,11 @@ const BUSY_SCRIPT: Step[] = [
   },
   {
     at: 7150,
-    rec: { kind: "handoff", ...base(60, "Rotazione del log service.out", 1), from: agent("arold"), to: agent("luke"), actor: agent("arold"), statusFrom: "todo", statusTo: "in_progress" },
+    rec: { kind: "handoff", ...base(60, "service.out log rotation", 1), from: agent("arold"), to: agent("luke"), actor: agent("arold"), statusFrom: "todo", statusTo: "in_progress" },
     apply: (s) => {
-      patchTask(s, "FRA-60", { holderId: IDS.luke, status: "in_progress", progress: 40 }, IDS.luke);
-      patchPerson(s, IDS.arold, { state: "idle", stateLabel: "Libero" });
-      patchPerson(s, IDS.luke, { state: "listening", stateLabel: "Ha ricevuto FRA-60" });
+      patchTask(s, "ACME-60", { holderId: IDS.luke, status: "in_progress", progress: 40 }, IDS.luke);
+      patchPerson(s, IDS.arold, { state: "idle", stateLabel: "Idle" });
+      patchPerson(s, IDS.luke, { state: "listening", stateLabel: "Received ACME-60" });
     },
   },
 ];
@@ -111,7 +111,7 @@ if (FIXTURE === "busy" && qs.get("script") !== "0") {
 }
 
 function eventsPage(after: string | undefined): EventsPage {
-  if (qs.get("eventsFail") === "1") throw new Error("Il worker non risponde");
+  if (qs.get("eventsFail") === "1") throw new Error("The worker is not responding");
   const list = after ? log.filter((r) => r.at > after).slice(0, 50) : log.slice(-20);
   return { records: clone(list), cursor: list.length ? list[list.length - 1]!.at : after ?? null, snapshotAt: snapshot.generatedAt };
 }
@@ -119,7 +119,7 @@ function eventsPage(after: string | undefined): EventsPage {
 function resolve(key: string, params: Record<string, unknown>): unknown {
   if (key === "snapshot") return clone(snapshot);
   if (key === "events") return eventsPage(params.after as string | undefined);
-  throw new Error(`Chiave dati sconosciuta: ${key}`);
+  throw new Error(`Unknown data key: ${key}`);
 }
 
 // Like the host: keyed on JSON.stringify(params); refresh() cancels (ignores) the previous request.
@@ -161,10 +161,10 @@ export function usePluginAction(key: string) {
 }
 
 const navigation = {
-  resolveHref: (to: string) => `/FRA${to}`,
+  resolveHref: (to: string) => `/ACME${to}`,
   navigate: (to: string) => console.info("[harness] navigate", to),
   linkProps: (to: string) => ({
-    href: `/FRA${to}`,
+    href: `/ACME${to}`,
     onClick: (e: { preventDefault(): void }) => {
       e.preventDefault();
       console.info("[harness] navigate", to);
@@ -175,13 +175,13 @@ export function useHostNavigation() {
   return navigation;
 }
 
-const CONTEXT = { companyId: "co-1", companyPrefix: "FRA", projectId: null, entityId: null, entityType: null, userId: "board-1" };
+const CONTEXT = { companyId: "co-1", companyPrefix: "ACME", projectId: null, entityId: null, entityType: null, userId: "board-1" };
 export function useHostContext() {
   return CONTEXT;
 }
 
 export function useHostLocation() {
-  return { pathname: qs.get("view") === "widget" ? "/FRA/dashboard" : "/FRA/org-flow", search: "", hash: "" };
+  return { pathname: qs.get("view") === "widget" ? "/ACME/dashboard" : "/ACME/org-flow", search: "", hash: "" };
 }
 
 export function usePluginToast() {

@@ -40,7 +40,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return str(ROOT / "prototype/poses" / f"{m.group(1)}-{m.group(2)}.png")
         if p.startswith("/api/assets/"):
             return str(ROOT / "tests/ui/photos/sample.png")
-        if p.startswith("/FRA/"):
+        if p.startswith("/ACME/"):
             return str(ROOT / "tests/ui/harness.html")
         return super().translate_path(path)
 

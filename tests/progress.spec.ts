@@ -4,7 +4,7 @@ import {
 } from "../src/worker/progress.js";
 
 describe("estimateFromStatus", () => {
-  it("maps the spec table", () => {
+  it("maps statuses to estimates", () => {
     expect(estimateFromStatus("backlog")).toBe(0);
     expect(estimateFromStatus("todo")).toBe(5);
     expect(estimateFromStatus("in_progress")).toBe(40);
@@ -24,19 +24,19 @@ describe("estimateFromStatus", () => {
 describe("parseChecklist", () => {
   it("counts checked and total boxes in several list styles", () => {
     const body = [
-      "# Piano",
-      "- [x] analisi",
-      "- [X] bozza",
-      "* [ ] revisione",
-      "  + [ ] sotto-punto",
-      "1. [x] numerato",
-      "- non è una casella",
-      "[x] senza elenco non conta",
+      "# Plan",
+      "- [x] analysis",
+      "- [X] draft",
+      "* [ ] review",
+      "  + [ ] sub-item",
+      "1. [x] numbered",
+      "- not a checkbox",
+      "[x] without a list does not count",
     ].join("\n");
     expect(parseChecklist(body)).toEqual({ done: 3, total: 5 });
   });
   it("ignores boxes inside code fences", () => {
-    expect(parseChecklist("```\n- [x] codice\n```\n- [ ] vero")).toEqual({ done: 0, total: 1 });
+    expect(parseChecklist("```\n- [x] code\n```\n- [ ] real")).toEqual({ done: 0, total: 1 });
   });
   it("returns null without boxes or body", () => {
     expect(parseChecklist("solo testo")).toBeNull();

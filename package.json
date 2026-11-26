@@ -3,7 +3,18 @@
   "version": "1.2.0",
   "type": "module",
   "private": true,
-  "description": "Org Flow: l'organigramma di Paperclip in diretta, con chi lavora su cosa, i task raggruppati per padre e i passaggi di mano animati",
+  "description": "Org Flow: Paperclip's live org chart, showing who is working on what, tasks grouped by parent and animated handoffs",
+  "homepage": "https://github.com/franciuto/paperclip-org-flow#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/franciuto/paperclip-org-flow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/franciuto/paperclip-org-flow/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "node ./esbuild.config.mjs",
     "dev": "node ./esbuild.config.mjs --watch",
@@ -22,7 +33,7 @@
     "ui"
   ],
   "author": "franciuto",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "devDependencies": {
     "@paperclipai/plugin-sdk": "2026.1023.0",
     "@types/node": "^24.0.0",

@@ -54,7 +54,7 @@ function checkBoxes(l: OrgLayout, departments: LayoutDepartment[]) {
 describe("department boxes", () => {
   it("draws one neutral box per department, members inside, no overlaps, gaps between them", () => {
     const { l } = realLayout();
-    expect(l.boxes.map((b) => [b.name, b.count])).toEqual([["GRAFICA", 3], ["COMUNICAZIONE", 1], ["IT E INFRASTRUTTURA", 4], ["LIBRERIA", 1]]);
+    expect(l.boxes.map((b) => [b.name, b.count])).toEqual([["GRAPHICS", 3], ["COMMUNICATIONS", 1], ["IT AND INFRASTRUCTURE", 4], ["LIBRARY", 1]]);
     checkBoxes(l, DEPARTMENTS);
     // CEO and Board are not in any box
     for (const id of [IDS.laura, IDS.board]) {
@@ -79,7 +79,7 @@ describe("department boxes", () => {
     const { input } = realLayout();
     const derived = deriveDepartments(input);
     expect(derived.map((d) => [d.name, [...d.memberIds].sort()])).toEqual(
-      DEPARTMENTS.map((d) => [`Team di ${d.name === "Grafica" ? "Giulia" : d.name === "Comunicazione" ? "Iris" : d.name === "Libreria" ? "Joe" : "Jamal"}`, [...d.memberIds].sort()]),
+      DEPARTMENTS.map((d) => [`${d.name === "Graphics" ? "Giulia" : d.name === "Communications" ? "Iris" : d.name === "Library" ? "Joe" : "Jamal"}'s team`, [...d.memberIds].sort()]),
     );
     const l = layoutOrg(input, 90, derived);
     expect(l.boxes).toHaveLength(4);

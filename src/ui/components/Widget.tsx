@@ -34,7 +34,7 @@ export function OrgFlowDashboardWidget({ context }: PluginWidgetProps) {
       <div className="of-root">
         <div className="of-widget">
           <div className="of-wtop"><span>Org Flow</span></div>
-          <p className="of-empty">{q.error ? "Dati non disponibili al momento." : "Caricamento…"}</p>
+          <p className="of-empty">{q.error ? "Data unavailable right now." : "Loading…"}</p>
         </div>
       </div>
     );
@@ -45,12 +45,12 @@ export function OrgFlowDashboardWidget({ context }: PluginWidgetProps) {
   const agents = snap.people.filter((p) => p.kind === "agent");
   return (
     <div className="of-root">
-      <div className="of-widget" aria-label="Org Flow, riepilogo">
+      <div className="of-widget" aria-label="Org Flow, summary">
         <div className="of-wtop">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--of-fg)", fontWeight: 600 }}>
             <span style={{ width: 15, height: 15, display: "inline-flex" }}><OrgIcon /></span>Org Flow
           </span>
-          <span title="Ultimo aggiornamento dei dati">{relativeTime(snap.generatedAt, now)}</span>
+          <span title="Last data update">{relativeTime(snap.generatedAt, now)}</span>
         </div>
         {groups.length ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -73,20 +73,20 @@ export function OrgFlowDashboardWidget({ context }: PluginWidgetProps) {
               ))}
             </span>
             <span>
-              Tutto tranquillo: nessun task aperto.
-              {snap.counts?.closed24h ? ` ${snap.counts.closed24h === 1 ? "1 chiuso" : `${snap.counts.closed24h} chiusi`} nelle ultime 24 h.` : ""}
+              All quiet: no open tasks.
+              {snap.counts?.closed24h ? ` ${snap.counts.closed24h} closed in the last 24 h.` : ""}
             </span>
           </div>
         )}
         <div className="of-wfoot">
-          <span><b>{counts.working}</b> al lavoro</span>
-          <span><b>{counts.sleepy}</b> dormono</span>
+          <span><b>{counts.working}</b> working</span>
+          <span><b>{counts.sleepy}</b> asleep</span>
           {counts.tasksWaitingForUsers ? (
-            <span className="of-w">{counts.tasksWaitingForUsers === 1 ? "1 task aspetta te" : `${counts.tasksWaitingForUsers} task aspettano te`}</span>
+            <span className="of-w">{counts.tasksWaitingForUsers === 1 ? "1 task is waiting for you" : `${counts.tasksWaitingForUsers} tasks are waiting for you`}</span>
           ) : (
-            <span>Niente che aspetta te</span>
+            <span>Nothing waiting for you</span>
           )}
-          <a {...nav.linkProps(PAGE_PATH)}>Apri →</a>
+          <a {...nav.linkProps(PAGE_PATH)}>Open →</a>
         </div>
       </div>
     </div>

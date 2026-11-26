@@ -1,6 +1,6 @@
 /**
  * Chip placement under a person: 2 per row, at most 4 slots. With more than 4 tasks the
- * 4th slot becomes a "+n altri" label. Pure; coordinates are relative to the node centre.
+ * 4th slot becomes a "+n more" label. Pure; coordinates are relative to the node centre.
  */
 
 export const CHIP_H = 18;
@@ -37,7 +37,7 @@ export function chipPercentWidth(): number {
 
 /** Chip width sized from the longest code shown (glyph + code + gap + "100%" + padding). */
 export function chipWidthFor(codes: string[]): number {
-  const longest = codes.reduce((m, c) => Math.max(m, chipCodeWidth(c)), chipCodeWidth("FRA-00"));
+  const longest = codes.reduce((m, c) => Math.max(m, chipCodeWidth(c)), chipCodeWidth("ACME-00"));
   return Math.ceil(Math.min(MAX_CHIP_W, CHIP_CODE_X + longest + CHIP_TEXT_GAP + chipPercentWidth() + CHIP_PAD_R));
 }
 

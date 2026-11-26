@@ -5,7 +5,7 @@
  * - Everything here must be JSON-serialisable (it crosses the worker → host → browser bridge).
  * - Timestamps are ISO 8601 strings.
  * - Person ids: agent UUID for agents, `user:<userId>` for human board users.
- * - Changing a field is a contract change: update worker, UI, tests and docs/contratto-dati.md together.
+ * - Changing a field is a contract change: update worker, UI, tests and docs/data-contract.md together.
  */
 
 /* ------------------------------------------------------------------ */
@@ -90,7 +90,7 @@ export interface PersonView {
   /** Raw Paperclip agent status (idle, running, paused, error, …). Null for users. */
   agentStatus: string | null;
   state: VisualState;
-  /** Short Italian label shown under the name, e.g. "Lavora su FRA-62 · 40%". */
+  /** Short Italian label shown under the name, e.g. "Lavora su ACME-62 · 40%". */
   stateLabel: string;
   stateSince: string | null;
   activeTaskId: string | null;
@@ -145,7 +145,7 @@ export interface GroupView {
 export interface OrgFlowSettings {
   sleepAfterMinutes: number;   // default 15
   keepClosedHours: number;     // closed tasks/groups stay visible this long, default 24
-  enableSimulation: boolean;   // show the "Simulazione" toggle in the UI, default true
+  enableSimulation: boolean;   // show the "Simulation" toggle in the UI, default true
   /** Optional department name overrides, matched by lead agent name or id. */
   departmentNames?: Array<{ lead: string; name: string }>;
 }
@@ -153,7 +153,7 @@ export interface OrgFlowSettings {
 /**
  * A department = the subtree under one direct report of a top-level agent (e.g. the CEO).
  * Paperclip has no department concept: the worker derives it from reportsTo; the name comes from
- * settings.departmentNames, else from the lead's title/role (Italian), else "Team di <nome>".
+ * settings.departmentNames, else from the lead's title/role, else "<name>'s team".
  */
 export interface DepartmentView {
   id: string;            // lead person id

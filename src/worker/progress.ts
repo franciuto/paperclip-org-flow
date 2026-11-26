@@ -5,7 +5,7 @@
 
 import type { ProgressSource } from "../shared/types.js";
 
-/** Estimate from the issue status (spec: "Stima dallo stato"). `blocked` is handled separately. */
+/** Estimate from the issue status (see docs/states-and-percentages.md). `blocked` is handled separately. */
 export const STATUS_ESTIMATE: Readonly<Record<string, number>> = {
   backlog: 0,
   todo: 5,

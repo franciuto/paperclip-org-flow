@@ -14,7 +14,7 @@ const ev = (eventType: string, payload: unknown, extra: Partial<DomainEventLike>
 describe("recordFromIssueEvent", () => {
   it("turns an agent-to-agent reassignment into a handoff", () => {
     const rec = recordFromIssueEvent(ev("issue.updated", {
-      identifier: "FRA-34",
+      identifier: "ACME-34",
       title: "Logo",
       changes: {
         assigneeAgentId: { from: "giulia", to: "sofia" },
@@ -24,7 +24,7 @@ describe("recordFromIssueEvent", () => {
     expect(rec).toMatchObject({
       kind: "handoff",
       issueId: "iss-1",
-      identifier: "FRA-34",
+      identifier: "ACME-34",
       from: { kind: "agent", id: "giulia" },
       to: { kind: "agent", id: "sofia" },
       statusFrom: "todo",
@@ -56,8 +56,8 @@ describe("recordFromIssueEvent", () => {
   });
 
   it("records a created issue with its assignee", () => {
-    const rec = recordFromIssueEvent(ev("issue.created", { identifier: "FRA-40", assigneeAgentId: "laura", status: "todo" }));
-    expect(rec).toMatchObject({ kind: "created", identifier: "FRA-40", to: { kind: "agent", id: "laura" }, statusTo: "todo" });
+    const rec = recordFromIssueEvent(ev("issue.created", { identifier: "ACME-40", assigneeAgentId: "laura", status: "todo" }));
+    expect(rec).toMatchObject({ kind: "created", identifier: "ACME-40", to: { kind: "agent", id: "laura" }, statusTo: "todo" });
   });
 });
 
